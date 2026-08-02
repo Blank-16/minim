@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Required to enumerate installed apps for the app list -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Optional: enables the "call favorite contact" style quick actions -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <!-- Needed to expand the notification shade on swipe-down gesture -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
+    <!-- Coarse location only, used for the optional location-aware app suggestions.
+         Never used for anything else; user can deny and suggestions fall back to
+         time-of-day + frequency only. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Requested at runtime only if the user enables "Show next calendar
+         event" in Settings — used solely for the on-device calendar peek
+         line under the clock, never uploaded anywhere. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
+    <application
+        android:name=".MinimApplication"
+        android:allowBackup="true"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Minim"
+        android:hardwareAccelerated="true"
+        android:largeHeap="false"
+        tools:targetApi="36">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:theme="@style/Theme.Minim.NoActionBar"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.screens.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Minim" />
+
+        <activity
+            android:name=".ui.screens.SpacesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Minim" />
+
+        <activity
+            android:name=".ui.screens.GesturesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Minim" />
+
+        <activity
+            android:name=".ui.screens.HiddenAppsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Minim" />
+
+        <!-- Listens for install/uninstall/update so the Room cache stays in sync
+             without ever polling PackageManager on a timer. -->
+        <receiver
+            android:name=".receiver.PackageChangeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Never bound automatically — the user must grant this explicitly
+             via Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, triggered
+             from the in-app Settings screen. Backs dot badges only; no
+             notification content is stored or transmitted anywhere. -->
+        <service
+            android:name=".service.MinimNotificationListenerService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>
