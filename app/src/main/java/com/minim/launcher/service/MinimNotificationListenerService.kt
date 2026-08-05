@@ -1,0 +1,45 @@
+package com.minim.launcher.service
+
+import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Backs the dot-badge notification indicator. Requires the user to
+ * explicitly grant notification-listener access via
+ * Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS (triggered from the
+ * Settings screen) — this is never requested silently, since it's one of
+ * the more sensitive permissions Android exposes.
+ *
+ * The active-package set is exposed as a plain in-process StateFlow rather
+ * than written to Room/DataStore: it's pure live UI state, changes on every
+ * notification post/removal, and has zero value once the process dies —
+ * persisting it would just be write amplification for no benefit.
+ */
+class MinimNotificationListenerService : NotificationListenerService() {
+
+    companion object {
+        private val _activePackages = MutableStateFlow<Set<String>>(emptySet())
+        val activePackages: StateFlow<Set<String>> = _activePackages
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        refresh()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+        refresh()
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        refresh()
+    }
+
+    private fun refresh() {
+        _activePackages.value = runCatching {
+            activeNotifications.map { it.packageName }.toSet()
+        }.getOrDefault(emptySet())
+    }
+}
