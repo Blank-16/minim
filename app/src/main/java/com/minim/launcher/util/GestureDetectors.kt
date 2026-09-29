@@ -63,6 +63,13 @@ suspend fun PointerInputScope.detectAllGestures(
         var pinchBaselineDistance: Float? = null
         var primaryEnd = down.position
         var primaryMaxMovement = 0f
+        // True once the primary pointer's change has been consumed by
+        // anything — including a descendant like AppRow's tap/long-press or
+        // swipe-reveal handler. Without this, two quick taps on two
+        // different apps (each already handled by that AppRow) would *also*
+        // satisfy the tap-timing check below and misfire the assigned
+        // double-tap gesture action on top of actually opening the app.
+        var primaryConsumedByDescendant = false
 
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Main)
@@ -80,14 +87,21 @@ suspend fun PointerInputScope.detectAllGestures(
             }
 
             val primary = event.changes.firstOrNull { it.id == down.id }
-            if (primary != null && primary.pressed) {
-                primaryEnd = primary.position
-                val movement = hypot(primaryEnd.x - startX, primaryEnd.y - down.position.y)
-                primaryMaxMovement = maxOf(primaryMaxMovement, movement)
-                // Once a single-finger gesture has clearly become a drag,
-                // consume so the row/list beneath doesn't also treat it as a
-                // scroll or a click.
-                if (movement > tapSlopPx) primary.consume()
+            if (primary != null) {
+                // Checked on the Main pass, which visits children before
+                // their parents — so by the time we see this event here (on
+                // the root), a descendant's own tap/click/drag handling has
+                // already had the chance to consume it.
+                if (primary.isConsumed) primaryConsumedByDescendant = true
+                if (primary.pressed) {
+                    primaryEnd = primary.position
+                    val movement = hypot(primaryEnd.x - startX, primaryEnd.y - down.position.y)
+                    primaryMaxMovement = maxOf(primaryMaxMovement, movement)
+                    // Once a single-finger gesture has clearly become a drag,
+                    // consume so the row/list beneath doesn't also treat it as a
+                    // scroll or a click.
+                    if (movement > tapSlopPx) primary.consume()
+                }
             }
 
             if (pressed.isEmpty()) break
@@ -119,7 +133,7 @@ suspend fun PointerInputScope.detectAllGestures(
             startedAtLeftEdge && dx > edgeSwipeThresholdPx -> onEdgeSwipeFromLeftEdge()
             startedAtRightEdge && dx < -edgeSwipeThresholdPx -> onEdgeSwipeFromRightEdge()
 
-            primaryMaxMovement < tapSlopPx && durationMillis < tapMaxDurationMillis -> {
+            primaryMaxMovement < tapSlopPx && durationMillis < tapMaxDurationMillis && !primaryConsumedByDescendant -> {
                 if (endTimeMillis - lastTapUpTimeMillis < doubleTapTimeoutMillis) {
                     onDoubleTap()
                     lastTapUpTimeMillis = 0L // consume the pair so a third tap doesn't chain
