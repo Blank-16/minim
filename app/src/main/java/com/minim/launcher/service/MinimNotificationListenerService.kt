@@ -29,6 +29,16 @@ class MinimNotificationListenerService : NotificationListenerService() {
         refresh()
     }
 
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        // Without this, revoking notification-listener access (or the
+        // system killing this service) left the last-known package set
+        // showing forever — badge dots stuck "on" for apps that may not
+        // even have a notification anymore, with no way to refresh short of
+        // a new notification arriving after the service reconnects.
+        _activePackages.value = emptySet()
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         refresh()
     }

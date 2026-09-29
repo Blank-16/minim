@@ -69,8 +69,18 @@ class SystemToggleController(private val context: Context) {
         }
     }
 
+    /**
+     * Without Notification Policy Access granted, Android reports
+     * `INTERRUPTION_FILTER_UNKNOWN` (0) rather than the real filter — that's
+     * "we can't tell", not "DND is on". Treating it as ALL (i.e. not active)
+     * used to be missing here, so the toggle showed DND as permanently
+     * "active" for anyone who hadn't granted that permission yet, even with
+     * DND genuinely off.
+     */
     fun isDndActive(): Boolean {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        return nm?.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+        val filter = nm?.currentInterruptionFilter ?: return false
+        return filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
+            filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
     }
 }
