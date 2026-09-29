@@ -23,8 +23,22 @@ fun QuickActionPickerSheet(
     onDismiss: () -> Unit,
     onSave: (String?) -> Unit
 ) {
-    var mode by remember { mutableStateOf("none") }
-    var phoneNumber by remember { mutableStateOf("") }
+    var mode by remember(app.packageName) {
+        mutableStateOf(
+            when {
+                app.quickAction == null -> "none"
+                app.quickAction == "open" -> "open"
+                app.quickAction.startsWith("call:") -> "call"
+                app.quickAction.startsWith("sms:") -> "sms"
+                else -> "none"
+            }
+        )
+    }
+    var phoneNumber by remember(app.packageName) {
+        mutableStateOf(
+            app.quickAction?.takeIf { it.contains(":") }?.substringAfter(":") ?: ""
+        )
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(20.dp)) {

@@ -38,6 +38,7 @@ class SpacesActivity : ComponentActivity() {
 
         setContent {
             val spaces by spacesRepo.observeSpaces().collectAsState(initial = emptyList())
+            val allApps by app.appRepository.observeApps().collectAsState(initial = emptyList())
             var editingSpaceId by remember { mutableStateOf<String?>(null) }
             var showCreateDialog by remember { mutableStateOf(false) }
             var newSpaceName by remember { mutableStateOf("") }
@@ -53,6 +54,7 @@ class SpacesActivity : ComponentActivity() {
                         SpaceEditor(
                             space = editing,
                             memberPackagesFlow = { spacesRepo.observeMembers(editing.id) },
+                            allApps = allApps,
                             onBack = { editingSpaceId = null },
                             onUpdate = { updated -> scope.launch { spacesRepo.updateSpace(updated) } },
                             onRemoveMember = { pkg -> scope.launch { spacesRepo.removeAppFromSpace(editing.id, pkg) } },
@@ -66,6 +68,11 @@ class SpacesActivity : ComponentActivity() {
                             @OptIn(ExperimentalMaterial3Api::class)
                             TopAppBar(
                                 title = { Text("Spaces") },
+                                navigationIcon = {
+                                    IconButton(onClick = { finish() }) {
+                                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                },
                                 actions = {
                                     IconButton(onClick = { showCreateDialog = true }) {
                                         Icon(Icons.Filled.Add, contentDescription = "New space")
@@ -151,6 +158,7 @@ class SpacesActivity : ComponentActivity() {
 private fun SpaceEditor(
     space: SpaceEntity,
     memberPackagesFlow: () -> kotlinx.coroutines.flow.Flow<List<String>>,
+    allApps: List<com.minim.launcher.data.AppInfo>,
     onBack: () -> Unit,
     onUpdate: (SpaceEntity) -> Unit,
     onRemoveMember: (String) -> Unit,
@@ -158,6 +166,10 @@ private fun SpaceEditor(
 ) {
     val members by memberPackagesFlow().collectAsState(initial = emptyList())
     var name by remember(space.id) { mutableStateOf(space.name) }
+    // Package names mean nothing to most people — show the app's actual
+    // label, falling back to the raw package name only for a member whose
+    // app was since uninstalled (so it's still identifiable and removable).
+    val labelByPackage = remember(allApps) { allApps.associateBy({ it.packageName }, { it.label }) }
 
     Column {
         @OptIn(ExperimentalMaterial3Api::class)
@@ -233,7 +245,7 @@ private fun SpaceEditor(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(pkg, style = MaterialTheme.typography.bodyMedium)
+                    Text(labelByPackage[pkg] ?: pkg, style = MaterialTheme.typography.bodyMedium)
                     IconButton(onClick = { onRemoveMember(pkg) }) {
                         Icon(Icons.Filled.Close, contentDescription = "Remove from space")
                     }

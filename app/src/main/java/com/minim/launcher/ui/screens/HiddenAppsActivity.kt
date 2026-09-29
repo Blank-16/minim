@@ -5,6 +5,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,7 +54,14 @@ class HiddenAppsActivity : FragmentActivity() {
                     when (authState) {
                         true -> Column {
                             @OptIn(ExperimentalMaterial3Api::class)
-                            TopAppBar(title = { Text("Hidden apps") })
+                            TopAppBar(
+                                title = { Text("Hidden apps") },
+                                navigationIcon = {
+                                    IconButton(onClick = { finish() }) {
+                                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                }
+                            )
                             if (hiddenApps.isEmpty()) {
                                 Text(
                                     "No hidden apps. Hide an app from its long-press menu on the home screen.",
