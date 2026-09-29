@@ -21,6 +21,9 @@ interface AppCacheDao {
     @Query("SELECT * FROM app_cache")
     suspend fun getAllOnce(): List<AppCacheEntity>
 
+    @Query("SELECT * FROM app_cache WHERE packageName = :packageName LIMIT 1")
+    suspend fun getByPackage(packageName: String): AppCacheEntity?
+
     @Upsert
     suspend fun upsertAll(apps: List<AppCacheEntity>)
 
@@ -50,12 +53,18 @@ interface UsageDao {
      * Frequency+recency score per package, computed entirely on-device with SQL —
      * no ML runtime, no network. Recent launches and launches at a similar hour
      * of day are weighted higher. This backs the "smart suggestions" row.
+     *
+     * The hour-of-day distance wraps at midnight (`MIN(diff, 24 - diff)`):
+     * a plain `ABS(hourOfDay - currentHour)` would treat 11pm and 12am as 23
+     * hours apart instead of 1, so a habit of opening an app right before
+     * midnight would get no "similar time of day" credit the next day at
+     * 12:01am.
      */
     @Query(
         """
         SELECT packageName, 
                COUNT(*) * 1.0 
-                 + SUM(CASE WHEN ABS(hourOfDay - :currentHour) <= 1 THEN 2.0 ELSE 0.0 END)
+                 + SUM(CASE WHEN MIN(ABS(hourOfDay - :currentHour), 24 - ABS(hourOfDay - :currentHour)) <= 1 THEN 2.0 ELSE 0.0 END)
                  + SUM(CASE WHEN dayOfWeek = :currentDayOfWeek THEN 1.0 ELSE 0.0 END)
                  AS score
         FROM usage_events

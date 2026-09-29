@@ -109,6 +109,19 @@ class SettingsRepository(private val context: Context) {
         return json.toString(2)
     }
 
+    /**
+     * Restores every preference from an exported JSON string.
+     *
+     * Each key must be written back with the *same* Preferences.Key type it
+     * was declared with elsewhere in this file — DataStore looks keys up by
+     * name only, so writing an Int-typed preference (like
+     * WIDGET_APP_WIDGET_ID) back in as a Long silently corrupts it: the very
+     * next read through `intPreferencesKey` throws a ClassCastException,
+     * crashing whatever was collecting that flow. `org.json` already parses
+     * a plain integer literal back into an `Int` (only values outside the
+     * Int range become `Long`), so writing Ints back through
+     * `intPreferencesKey` round-trips correctly.
+     */
     suspend fun importFromJson(jsonString: String) {
         val json = JSONObject(jsonString)
         context.dataStore.edit { prefs ->
@@ -116,8 +129,8 @@ class SettingsRepository(private val context: Context) {
                 when (val value = json.get(key)) {
                     is Boolean -> prefs[booleanPreferencesKey(key)] = value
                     is String -> prefs[stringPreferencesKey(key)] = value
+                    is Int -> prefs[intPreferencesKey(key)] = value
                     is Long -> prefs[longPreferencesKey(key)] = value
-                    is Int -> prefs[longPreferencesKey(key)] = value.toLong()
                 }
             }
         }

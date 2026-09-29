@@ -3,26 +3,27 @@ package com.minim.launcher.util
 import com.minim.launcher.data.AppInfo
 
 /**
- * Precomputed once whenever the app list changes (install/uninstall — rare),
- * not on every keystroke. Search itself is then just a map lookup plus a
- * cheap contains-scan over a small candidate set, so typing feels instant
- * even with 500+ apps installed. This is what keeps search latency
- * imperceptible without needing debounce-induced lag.
+ * Built once whenever the app list changes (install/uninstall — rare), not
+ * on every keystroke, so typing never pays a rebuild cost. Query itself is a
+ * single contains-scan over the (small, a few hundred apps at most) list —
+ * cheap enough that no bucketing/indexing is needed, and simple enough that
+ * "type anywhere in the name" behaves the way people expect.
+ *
+ * Earlier versions bucketed apps by their first letter and only scanned the
+ * bucket matching the query's first letter. That's correct for a prefix
+ * search but wrong for a contains search: searching "note" would miss
+ * "BlackNote" because 'n' and 'B' don't match, even though the label clearly
+ * contains "note". Scanning the full list avoids that class of missing
+ * results entirely.
  */
 class AppSearchIndex private constructor(
-    private val apps: List<AppInfo>,
-    private val byPrefix: Map<String, List<AppInfo>>
+    private val apps: List<AppInfo>
 ) {
     fun query(raw: String): List<AppInfo> {
         val q = raw.trim().lowercase()
         if (q.isEmpty()) return apps
 
-        // Exact-prefix bucket first (covers the overwhelming majority of real
-        // searches — people type the start of an app name).
-        val prefixHit = byPrefix[q.take(PREFIX_LEN)]
-        val candidates = prefixHit ?: apps
-
-        return candidates
+        return apps
             .filter { it.label.contains(q, ignoreCase = true) }
             .sortedWith(
                 compareByDescending<AppInfo> { it.label.startsWith(q, ignoreCase = true) }
@@ -31,15 +32,6 @@ class AppSearchIndex private constructor(
     }
 
     companion object {
-        private const val PREFIX_LEN = 1
-
-        fun build(apps: List<AppInfo>): AppSearchIndex {
-            val buckets = HashMap<String, MutableList<AppInfo>>()
-            for (app in apps) {
-                val key = app.label.take(PREFIX_LEN).lowercase()
-                buckets.getOrPut(key) { mutableListOf() }.add(app)
-            }
-            return AppSearchIndex(apps, buckets)
-        }
+        fun build(apps: List<AppInfo>): AppSearchIndex = AppSearchIndex(apps)
     }
 }

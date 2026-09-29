@@ -59,7 +59,16 @@ class AppRepository(context: Context) {
         dao.upsertAll(entities)
     }
 
-    /** Called from PackageChangeReceiver for exactly the package that changed. */
+    /**
+     * Called from PackageChangeReceiver for exactly the package that changed.
+     *
+     * Preserves the existing row's favorite/hidden/quickAction flags when the
+     * package is merely updated (not freshly installed) — `@Upsert` replaces
+     * every column of a conflicting row, so building a brand-new
+     * [AppCacheEntity] with its constructor defaults here would otherwise
+     * silently un-favorite, un-hide, and clear the quick action of any app
+     * the moment it auto-updates from the Play Store.
+     */
     suspend fun syncSinglePackage(packageName: String, removed: Boolean) = withContext(Dispatchers.Default) {
         if (removed) {
             dao.deleteByPackage(packageName)
@@ -68,15 +77,19 @@ class AppRepository(context: Context) {
         val launchIntent = pm.getLaunchIntentForPackage(packageName) ?: return@withContext
         val resolveInfo = pm.resolveActivity(launchIntent, 0) ?: return@withContext
         val ai = resolveInfo.activityInfo.applicationInfo
+        val existing = dao.getByPackage(packageName)
         dao.upsert(
             AppCacheEntity(
                 packageName = packageName,
                 activityClassName = resolveInfo.activityInfo.name,
                 label = resolveInfo.loadLabel(pm).toString(),
                 isSystemApp = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                installTimeMillis = runCatching {
+                installTimeMillis = existing?.installTimeMillis ?: runCatching {
                     pm.getPackageInfo(packageName, 0).firstInstallTime
-                }.getOrDefault(0L)
+                }.getOrDefault(0L),
+                favorite = existing?.favorite ?: false,
+                hidden = existing?.hidden ?: false,
+                quickAction = existing?.quickAction
             )
         )
     }
