@@ -184,7 +184,7 @@ private fun SectionLabel(text: String) {
     Text(
         text = displayText,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f),
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, end = 24.dp, bottom = 8.dp)
     )
 }

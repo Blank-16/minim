@@ -28,7 +28,8 @@ fun AlphabetIndexBar(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .width(28.dp)
+            .width(20.dp)
+            .padding(end = 6.dp)
             .pointerInput(availableLetters) {
                 detectVerticalDragGestures { change, _ ->
                     val index = (change.position.y / size.height * LETTERS.size)
@@ -44,14 +45,14 @@ fun AlphabetIndexBar(
             val enabled = letter in availableLetters
             Text(
                 text = letter.toString(),
-                fontSize = 10.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Medium,
                 color = if (enabled) {
-                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
                 } else {
-                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f)
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                 },
-                modifier = Modifier.padding(vertical = 1.dp)
+                modifier = Modifier.padding(vertical = 1.2.dp)
             )
         }
     }

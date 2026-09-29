@@ -62,26 +62,29 @@ fun ClockHeader(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.Start
     ) {
         Text(
             text = timeFormat.format(now),
-            fontSize = 52.sp,
+            fontSize = 72.sp,
             fontWeight = weight,
             fontFamily = family,
+            letterSpacing = (-1).sp,
+            lineHeight = 72.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = dateText,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         if (!infoLine.isNullOrBlank()) {
             Text(
                 text = infoLine,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
@@ -91,7 +94,7 @@ fun ClockHeader(
                     (if (language == DesignLanguage.NOTHING) activeProfileName.uppercase() else activeProfileName),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }

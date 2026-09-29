@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -126,8 +127,19 @@ class MainActivity : ComponentActivity() {
                 globalThemeModeRaw = screenSettings.themeModeRaw
             )
 
-            LaunchedEffect(appearance.designLanguage) {
-                WindowChromeController.apply(this@MainActivity, appearance.designLanguage)
+            // Mirrors MinimTheme's own light/dark resolution below so the
+            // window's background drawable (painted before Compose's first
+            // frame) matches what Compose is about to draw, instead of
+            // always defaulting to black regardless of theme.
+            val systemDark = isSystemInDarkTheme()
+            val useDarkWindowBackground = when (MinimThemeMode.fromRaw(appearance.themeModeRaw)) {
+                MinimThemeMode.SYSTEM -> systemDark
+                MinimThemeMode.LIGHT -> false
+                MinimThemeMode.DARK -> true
+            }
+
+            LaunchedEffect(appearance.designLanguage, useDarkWindowBackground) {
+                WindowChromeController.apply(this@MainActivity, appearance.designLanguage, useDarkWindowBackground)
             }
 
             var torchActive by remember { mutableStateOf(false) }

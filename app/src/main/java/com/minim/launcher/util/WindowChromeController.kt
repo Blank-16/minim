@@ -17,7 +17,15 @@ import com.minim.launcher.ui.theme.DesignLanguage
  */
 object WindowChromeController {
 
-    fun apply(activity: Activity, designLanguage: DesignLanguage) {
+    /**
+     * @param useDark Which flat background to paint behind Nothing/Android16
+     *   content. This is the window's *background drawable*, which Android
+     *   paints before Compose has drawn a single frame — hardcoding it to
+     *   black (as this used to do) meant a light-theme user saw a flash of
+     *   black on every launcher resume/rotation, before Compose caught up
+     *   and painted the real (light) background over it.
+     */
+    fun apply(activity: Activity, designLanguage: DesignLanguage, useDark: Boolean = true) {
         val window = activity.window
         when (designLanguage) {
             DesignLanguage.GLASS -> {
@@ -39,7 +47,9 @@ object WindowChromeController {
                     WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER or
                         WindowManager.LayoutParams.FLAG_BLUR_BEHIND
                 )
-                window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+                window.setBackgroundDrawable(
+                    ColorDrawable(if (useDark) Color.BLACK else Color.WHITE)
+                )
             }
         }
     }

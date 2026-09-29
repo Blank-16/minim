@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -45,7 +46,7 @@ fun WidgetSpace(
     val label = if (language == DesignLanguage.NOTHING) "WIDGET" else "Widget"
     val hasWidget = appWidgetId != -1
 
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -54,23 +55,26 @@ fun WidgetSpace(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (hasWidget && !collapsed) {
-                    IconButton(onClick = onRemoveWidget) {
+                    IconButton(onClick = onRemoveWidget, modifier = Modifier.size(36.dp)) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = "Remove widget",
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                     }
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
-                IconButton(onClick = onToggleCollapsed) {
+                IconButton(onClick = onToggleCollapsed, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = if (collapsed) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
                         contentDescription = if (collapsed) "Expand widget" else "Collapse widget",
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -83,10 +87,16 @@ fun WidgetSpace(
         ) {
             AdaptiveSurface(modifier = Modifier.heightIn(min = 120.dp, max = 260.dp)) {
                 if (hasWidget) {
-                    AndroidView(
-                        factory = { context -> createHostView(appWidgetId) ?: View(context) },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 260.dp)
-                    )
+                    // Keyed on appWidgetId: AndroidView's `factory` only runs once
+                    // per call site, so without this key, switching to a different
+                    // widget (remove + add) would keep showing the old host view
+                    // since createHostView(appWidgetId) never re-runs.
+                    key(appWidgetId) {
+                        AndroidView(
+                            factory = { context -> createHostView(appWidgetId) ?: View(context) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 260.dp)
+                        )
+                    }
                 } else {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(20.dp),

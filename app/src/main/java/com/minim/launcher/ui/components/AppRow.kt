@@ -122,7 +122,7 @@ fun AppRow(
                         }
                     )
                 }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 24.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (showIcon) {
@@ -138,6 +138,7 @@ fun AppRow(
                 text = app.label,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
 
@@ -150,7 +151,8 @@ fun AppRow(
                 }
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .padding(start = 8.dp)
+                        .size(6.dp)
                         .background(MaterialTheme.colorScheme.primary, badgeShape)
                 )
             }
