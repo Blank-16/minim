@@ -1,30 +1,31 @@
 package com.minim.launcher.ui.screens
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +41,7 @@ import com.minim.launcher.ui.theme.LocalDesignLanguage
 import com.minim.launcher.ui.theme.MinimTheme
 import com.minim.launcher.ui.theme.MinimThemeMode
 import com.minim.launcher.util.CalendarPeek
+import com.minim.launcher.util.WindowChromeController
 import kotlinx.coroutines.launch
 
 private val LocalIsDark = compositionLocalOf { false }
@@ -56,8 +58,6 @@ class SettingsActivity : ComponentActivity() {
     private val calendarPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        // If denied, flip the setting back off rather than leaving it on
-        // with no data behind it.
         if (!granted) {
             lifecycleScope.launch { (application as MinimApplication).settingsRepository.setShowCalendarPeek(false) }
         }
@@ -119,7 +119,7 @@ class SettingsActivity : ComponentActivity() {
                 ) { turnOn ->
                     scope.launch { settings.setShowCalendarPeek(turnOn) }
                     if (turnOn && !CalendarPeek.hasPermission(localContext)) {
-                        calendarPermissionLauncher.launch(android.Manifest.permission.READ_CALENDAR)
+                        calendarPermissionLauncher.launch(Manifest.permission.READ_CALENDAR)
                     }
                 },
                 ToggleItem(
@@ -140,6 +140,14 @@ class SettingsActivity : ComponentActivity() {
                 MinimThemeMode.DARK -> true
             }
 
+            LaunchedEffect(designLanguage, isDark) {
+                WindowChromeController.apply(
+                    this@SettingsActivity,
+                    designLanguage,
+                    isDark
+                )
+            }
+
             CompositionLocalProvider(LocalIsDark provides isDark) {
                 MinimTheme(
                     designLanguage = designLanguage,
@@ -148,7 +156,7 @@ class SettingsActivity : ComponentActivity() {
                     accentColor = AccentOptions[accentName] ?: AccentOptions.getValue("Red")
                 ) {
                     val surfaceColor = if (designLanguage == DesignLanguage.GLASS) {
-                        if (isDark) Color(0xFF121212) else Color(0xFFF7F7F9)
+                        Color.Transparent
                     } else {
                         MaterialTheme.colorScheme.background
                     }
@@ -159,138 +167,150 @@ class SettingsActivity : ComponentActivity() {
                         Column(modifier = Modifier.fillMaxSize()) {
                             @OptIn(ExperimentalMaterial3Api::class)
                             TopAppBar(
-                                title = { Text("Settings") },
-                            navigationIcon = {
-                                IconButton(onClick = { finish() }) {
-                                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                                }
-                            }
-                        )
-                        LazyColumn {
-                            item {
-                                DesignLanguageSelector(
-                                    current = designLanguage,
-                                    onSelect = { lang ->
-                                        scope.launch {
-                                            settings.setDesignLanguage(lang.toRaw())
-                                        }
+                                title = {
+                                    Text(
+                                        "Settings",
+                                        color = if (designLanguage == DesignLanguage.GLASS) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = if (designLanguage == DesignLanguage.GLASS) FontWeight.Bold else null
+                                    )
+                                },
+                                navigationIcon = {
+                                    IconButton(onClick = { finish() }) {
+                                        Icon(
+                                            Icons.Filled.ArrowBack,
+                                            contentDescription = "Back",
+                                            tint = if (designLanguage == DesignLanguage.GLASS) Color.White else MaterialTheme.colorScheme.onSurface
+                                        )
                                     }
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(
+                                    containerColor = Color.Transparent
                                 )
-                            }
-                            item {
-                                ThemeModeSelector(
-                                    current = themeMode,
-                                    onSelect = { mode ->
-                                        scope.launch {
-                                            settings.setThemeMode(mode.toRaw())
-                                        }
-                                    }
-                                )
-                            }
-                            if (designLanguage == DesignLanguage.ANDROID_16 && !dynamicColor) {
+                            )
+                            LazyColumn {
                                 item {
-                                    AccentPicker(
-                                        current = accentName,
-                                        onSelect = { name -> scope.launch { settings.setAccentName(name) } }
+                                    DesignLanguageSelector(
+                                        current = designLanguage,
+                                        onSelect = { lang ->
+                                            scope.launch {
+                                                settings.setDesignLanguage(lang.toRaw())
+                                            }
+                                        }
                                     )
                                 }
-                            }
-                            if (designLanguage == DesignLanguage.ANDROID_16) {
                                 item {
-                                    ToggleItem(
-                                        "Match wallpaper colors",
-                                        "Material You dynamic color (Android 12+); overrides the accent above",
-                                        dynamicColor
-                                    ) { scope.launch { settings.setDynamicColor(it) } }.let { SettingsToggleRow(it) }
-                                }
-                            }
-                            item {
-                                IconShapeSelector(
-                                    current = iconShape,
-                                    onSelect = { shape -> scope.launch { settings.setIconShape(shape) } }
-                                )
-                            }
-                            items(toggles) { item -> SettingsToggleRow(item) }
-                            item {
-                                NotificationBadgesRow(
-                                    listenerGranted = NotificationManagerCompat.getEnabledListenerPackages(localContext)
-                                        .contains(localContext.packageName),
-                                    onOpenSystemSettings = {
-                                        startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                    }
-                                )
-                            }
-                            item {
-                                SettingsCard(
-                                    title = "Hidden apps",
-                                    subtitle = "View and unhide apps you've hidden from the list",
-                                    onClick = {
-                                        startActivity(Intent(this@SettingsActivity, HiddenAppsActivity::class.java))
-                                    }
-                                )
-                            }
-                            item {
-                                SettingsCard(
-                                    title = "Gestures",
-                                    subtitle = "Assign double-tap, swipe, pinch, and edge-swipe actions",
-                                    onClick = {
-                                        startActivity(Intent(this@SettingsActivity, GesturesActivity::class.java))
-                                    }
-                                )
-                            }
-                            item {
-                                SettingsCard(
-                                    title = "Spaces & profiles",
-                                    subtitle = "Group apps and give a Space its own look",
-                                    onClick = {
-                                        startActivity(Intent(this@SettingsActivity, SpacesActivity::class.java))
-                                    }
-                                )
-                            }
-                            item {
-                                val autoActivate by settings.autoActivateProfiles.collectAsState(initial = true)
-                                SettingsToggleRow(
-                                    ToggleItem(
-                                        "Auto-activate profiles",
-                                        "Switch to a Space's look automatically during its time window",
-                                        autoActivate
-                                    ) { scope.launch { settings.setAutoActivateProfiles(it) } }
-                                )
-                            }
-                            item {
-                                BackupRow(
-                                    onExport = {
-                                        scope.launch {
-                                            val json = settings.exportToJson()
-                                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "application/json"
-                                                putExtra(Intent.EXTRA_TEXT, json)
+                                    ThemeModeSelector(
+                                        current = themeMode,
+                                        onSelect = { mode ->
+                                            scope.launch {
+                                                settings.setThemeMode(mode.toRaw())
                                             }
-                                            startActivity(Intent.createChooser(sendIntent, "Export Minim settings"))
                                         }
+                                    )
+                                }
+                                if (designLanguage == DesignLanguage.ANDROID_16 && !dynamicColor) {
+                                    item {
+                                        AccentPicker(
+                                            current = accentName,
+                                            onSelect = { name -> scope.launch { settings.setAccentName(name) } }
+                                        )
                                     }
-                                )
+                                }
+                                if (designLanguage == DesignLanguage.ANDROID_16) {
+                                    item {
+                                        ToggleItem(
+                                            "Match wallpaper colors",
+                                            "Material You dynamic color (Android 12+); overrides the accent above",
+                                            dynamicColor
+                                        ) { scope.launch { settings.setDynamicColor(it) } }.let { SettingsToggleRow(it) }
+                                    }
+                                }
+                                item {
+                                    IconShapeSelector(
+                                        current = iconShape,
+                                        onSelect = { shape -> scope.launch { settings.setIconShape(shape) } }
+                                    )
+                                }
+                                items(toggles) { item -> SettingsToggleRow(item) }
+                                item {
+                                    NotificationBadgesRow(
+                                        listenerGranted = NotificationManagerCompat.getEnabledListenerPackages(localContext)
+                                            .contains(localContext.packageName),
+                                        onOpenSystemSettings = {
+                                            startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                        }
+                                    )
+                                }
+                                item {
+                                    SettingsCard(
+                                        title = "Hidden apps",
+                                        subtitle = "View and unhide apps you've hidden from the list",
+                                        onClick = {
+                                            startActivity(Intent(this@SettingsActivity, HiddenAppsActivity::class.java))
+                                        }
+                                    )
+                                }
+                                item {
+                                    SettingsCard(
+                                        title = "Gestures",
+                                        subtitle = "Assign double-tap, swipe, pinch, and edge-swipe actions",
+                                        onClick = {
+                                            startActivity(Intent(this@SettingsActivity, GesturesActivity::class.java))
+                                        }
+                                    )
+                                }
+                                item {
+                                    SettingsCard(
+                                        title = "Spaces & profiles",
+                                        subtitle = "Group apps and give a Space its own look",
+                                        onClick = {
+                                            startActivity(Intent(this@SettingsActivity, SpacesActivity::class.java))
+                                        }
+                                    )
+                                }
+                                item {
+                                    val autoActivate by settings.autoActivateProfiles.collectAsState(initial = true)
+                                    SettingsToggleRow(
+                                        ToggleItem(
+                                            "Auto-activate profiles",
+                                            "Switch to a Space's look automatically during its time window",
+                                            autoActivate
+                                        ) { scope.launch { settings.setAutoActivateProfiles(it) } }
+                                    )
+                                }
+                                item {
+                                    BackupRow(
+                                        onExport = {
+                                            scope.launch {
+                                                val json = settings.exportToJson()
+                                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "application/json"
+                                                    putExtra(Intent.EXTRA_TEXT, json)
+                                                }
+                                                startActivity(Intent.createChooser(sendIntent, "Export Minim settings"))
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-      }
     }
 }
 
 @Composable
 private fun SettingsHeader(text: String) {
     val designLanguage = LocalDesignLanguage.current
-    val isDark = LocalIsDark.current
-    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+    val isGlass = designLanguage == DesignLanguage.GLASS
 
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = if (isGlassDark) FontWeight.Bold else null,
-        color = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
+        fontWeight = if (isGlass) FontWeight.Bold else null,
+        color = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -302,9 +322,8 @@ private fun DesignLanguageSelector(current: DesignLanguage, onSelect: (DesignLan
         val bodyMedium = MaterialTheme.typography.bodyMedium
         val subtextStyle = bodyMedium.copy(fontSize = (bodyMedium.fontSize.value - 2).sp)
         val designLanguage = LocalDesignLanguage.current
-        val isDark = LocalIsDark.current
-        val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
-        val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        val isGlass = designLanguage == DesignLanguage.GLASS
+        val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
 
         Text(
             "Each option changes color, shape, and type together — not just a tint",
@@ -338,26 +357,36 @@ private fun DesignLanguageSelector(current: DesignLanguage, onSelect: (DesignLan
 @Composable
 private fun DesignLanguageOption(title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) {
     val designLanguage = LocalDesignLanguage.current
-    val isDark = LocalIsDark.current
-    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+    val isGlass = designLanguage == DesignLanguage.GLASS
 
-    val titleColor = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
-    val titleWeight = if (isGlassDark) FontWeight.Bold else null
+    val titleColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleWeight = if (isGlass) FontWeight.Bold else null
     val subtextStyle = MaterialTheme.typography.bodyMedium
-    val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+
+    val optionBgColor = if (isGlass) {
+        if (selected) Color.White.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.12f)
+    } else {
+        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
-            )
+            .background(optionBgColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = if (isGlass) RadioButtonDefaults.colors(
+                selectedColor = Color.White,
+                unselectedColor = Color.White.copy(alpha = 0.6f)
+            ) else RadioButtonDefaults.colors()
+        )
         Spacer(modifier = Modifier.width(4.dp))
         Column {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = titleWeight, color = titleColor)
@@ -372,13 +401,26 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
 
 @Composable
 private fun ThemeModeSelector(current: MinimThemeMode, onSelect: (MinimThemeMode) -> Unit) {
+    val isGlass = LocalDesignLanguage.current == DesignLanguage.GLASS
+    val chipColors = if (isGlass) FilterChipDefaults.filterChipColors(
+        containerColor = Color.White.copy(alpha = 0.12f),
+        labelColor = Color.White.copy(alpha = 0.8f),
+        selectedContainerColor = Color.White.copy(alpha = 0.35f),
+        selectedLabelColor = Color.White
+    ) else FilterChipDefaults.filterChipColors()
+
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         SettingsHeader("Light / dark")
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(MinimThemeMode.SYSTEM to "System", MinimThemeMode.LIGHT to "Light", MinimThemeMode.DARK to "Dark")
                 .forEach { (mode, label) ->
-                    FilterChip(selected = current == mode, onClick = { onSelect(mode) }, label = { Text(label) })
+                    FilterChip(
+                        selected = current == mode,
+                        onClick = { onSelect(mode) },
+                        label = { Text(label) },
+                        colors = chipColors
+                    )
                 }
         }
     }
@@ -418,18 +460,20 @@ private fun SettingsCard(
     val designLanguage = LocalDesignLanguage.current
     val shape = MaterialTheme.shapes.medium
     val isDark = LocalIsDark.current
-    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+    val isGlass = designLanguage == DesignLanguage.GLASS
 
     var modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 10.dp, vertical = 6.dp)
         .clip(shape)
 
-    if (!isDark) {
+    if (isGlass) {
+        modifier = modifier.background(Color.White.copy(alpha = 0.16f))
+    } else if (!isDark) {
         val borderColor = when (designLanguage) {
-            DesignLanguage.GLASS -> Color(0xFF409CFF) // light blue
-            DesignLanguage.ANDROID_16 -> MaterialTheme.colorScheme.primary // accent color / primary color
-            DesignLanguage.NOTHING -> Color(0xFFFF6B6B).copy(alpha = 0.7f) // light red
+            DesignLanguage.ANDROID_16 -> MaterialTheme.colorScheme.primary
+            DesignLanguage.NOTHING -> Color(0xFFFF6B6B).copy(alpha = 0.7f)
+            else -> Color.Transparent
         }
         modifier = modifier
             .background(Color.Transparent)
@@ -447,10 +491,10 @@ private fun SettingsCard(
 
     modifier = modifier.padding(horizontal = 16.dp, vertical = 14.dp)
 
-    val titleColor = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
-    val titleWeight = if (isGlassDark) FontWeight.Bold else null
+    val titleColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleWeight = if (isGlass) FontWeight.Bold else null
     val subtextStyle = MaterialTheme.typography.bodyMedium
-    val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
 
     Row(
         modifier = modifier,
@@ -489,13 +533,26 @@ private fun BackupRow(onExport: () -> Unit) {
 
 @Composable
 private fun IconShapeSelector(current: String, onSelect: (String) -> Unit) {
+    val isGlass = LocalDesignLanguage.current == DesignLanguage.GLASS
+    val chipColors = if (isGlass) FilterChipDefaults.filterChipColors(
+        containerColor = Color.White.copy(alpha = 0.12f),
+        labelColor = Color.White.copy(alpha = 0.8f),
+        selectedContainerColor = Color.White.copy(alpha = 0.35f),
+        selectedLabelColor = Color.White
+    ) else FilterChipDefaults.filterChipColors()
+
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         SettingsHeader("Icon shape")
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("circle" to "Circle", "squircle" to "Squircle", "roundedSquare" to "Rounded square")
                 .forEach { (value, label) ->
-                    FilterChip(selected = current == value, onClick = { onSelect(value) }, label = { Text(label) })
+                    FilterChip(
+                        selected = current == value,
+                        onClick = { onSelect(value) },
+                        label = { Text(label) },
+                        colors = chipColors
+                    )
                 }
         }
     }
@@ -550,7 +607,14 @@ private fun NothingSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) 
             )
         }
     } else {
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = if (designLanguage == DesignLanguage.GLASS) SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF0A84FF)
+            ) else SwitchDefaults.colors()
+        )
     }
 }
 
