@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -129,8 +130,21 @@ class SettingsActivity : ComponentActivity() {
                 dynamicColor = dynamicColor,
                 accentColor = AccentOptions[accentName] ?: AccentOptions.getValue("Red")
             ) {
-                Surface {
-                    Column {
+                val isDark = when (themeMode) {
+                    MinimThemeMode.SYSTEM -> isSystemInDarkTheme()
+                    MinimThemeMode.LIGHT -> false
+                    MinimThemeMode.DARK -> true
+                }
+                val surfaceColor = if (designLanguage == DesignLanguage.GLASS) {
+                    if (isDark) Color(0xFF121212) else Color(0xFFF7F7F9)
+                } else {
+                    MaterialTheme.colorScheme.background
+                }
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = surfaceColor
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
                         @OptIn(ExperimentalMaterial3Api::class)
                         TopAppBar(
                             title = { Text("Settings") },
