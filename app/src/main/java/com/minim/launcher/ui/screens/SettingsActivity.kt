@@ -17,22 +17,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.lifecycleScope
 import com.minim.launcher.MinimApplication
 import com.minim.launcher.ui.theme.AccentOptions
 import com.minim.launcher.ui.theme.DesignLanguage
+import com.minim.launcher.ui.theme.LocalDesignLanguage
 import com.minim.launcher.ui.theme.MinimTheme
 import com.minim.launcher.ui.theme.MinimThemeMode
 import com.minim.launcher.util.CalendarPeek
 import kotlinx.coroutines.launch
+
+private val LocalIsDark = compositionLocalOf { false }
 
 private data class ToggleItem(
     val title: String,
@@ -124,30 +134,32 @@ class SettingsActivity : ComponentActivity() {
                 ) { scope.launch { settings.setNotificationBadgesEnabled(it) } }
             )
 
-            MinimTheme(
-                designLanguage = designLanguage,
-                themeMode = themeMode,
-                dynamicColor = dynamicColor,
-                accentColor = AccentOptions[accentName] ?: AccentOptions.getValue("Red")
-            ) {
-                val isDark = when (themeMode) {
-                    MinimThemeMode.SYSTEM -> isSystemInDarkTheme()
-                    MinimThemeMode.LIGHT -> false
-                    MinimThemeMode.DARK -> true
-                }
-                val surfaceColor = if (designLanguage == DesignLanguage.GLASS) {
-                    if (isDark) Color(0xFF121212) else Color(0xFFF7F7F9)
-                } else {
-                    MaterialTheme.colorScheme.background
-                }
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = surfaceColor
+            val isDark = when (themeMode) {
+                MinimThemeMode.SYSTEM -> isSystemInDarkTheme()
+                MinimThemeMode.LIGHT -> false
+                MinimThemeMode.DARK -> true
+            }
+
+            CompositionLocalProvider(LocalIsDark provides isDark) {
+                MinimTheme(
+                    designLanguage = designLanguage,
+                    themeMode = themeMode,
+                    dynamicColor = dynamicColor,
+                    accentColor = AccentOptions[accentName] ?: AccentOptions.getValue("Red")
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        @OptIn(ExperimentalMaterial3Api::class)
-                        TopAppBar(
-                            title = { Text("Settings") },
+                    val surfaceColor = if (designLanguage == DesignLanguage.GLASS) {
+                        if (isDark) Color(0xFF121212) else Color(0xFFF7F7F9)
+                    } else {
+                        MaterialTheme.colorScheme.background
+                    }
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = surfaceColor
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            @OptIn(ExperimentalMaterial3Api::class)
+                            TopAppBar(
+                                title = { Text("Settings") },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
                                     Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -209,67 +221,31 @@ class SettingsActivity : ComponentActivity() {
                                 )
                             }
                             item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            startActivity(Intent(this@SettingsActivity, HiddenAppsActivity::class.java))
-                                        }
-                                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("Hidden apps", style = MaterialTheme.typography.titleMedium)
-                                        Text(
-                                            "View and unhide apps you've hidden from the list",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                                        )
+                                SettingsCard(
+                                    title = "Hidden apps",
+                                    subtitle = "View and unhide apps you've hidden from the list",
+                                    onClick = {
+                                        startActivity(Intent(this@SettingsActivity, HiddenAppsActivity::class.java))
                                     }
-                                }
+                                )
                             }
                             item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            startActivity(Intent(this@SettingsActivity, GesturesActivity::class.java))
-                                        }
-                                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("Gestures", style = MaterialTheme.typography.titleMedium)
-                                        Text(
-                                            "Assign double-tap, swipe, pinch, and edge-swipe actions",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                                        )
+                                SettingsCard(
+                                    title = "Gestures",
+                                    subtitle = "Assign double-tap, swipe, pinch, and edge-swipe actions",
+                                    onClick = {
+                                        startActivity(Intent(this@SettingsActivity, GesturesActivity::class.java))
                                     }
-                                }
+                                )
                             }
                             item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            startActivity(Intent(this@SettingsActivity, SpacesActivity::class.java))
-                                        }
-                                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("Spaces & profiles", style = MaterialTheme.typography.titleMedium)
-                                        Text(
-                                            "Group apps and give a Space its own look",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                                        )
+                                SettingsCard(
+                                    title = "Spaces & profiles",
+                                    subtitle = "Group apps and give a Space its own look",
+                                    onClick = {
+                                        startActivity(Intent(this@SettingsActivity, SpacesActivity::class.java))
                                     }
-                                }
+                                )
                             }
                             item {
                                 val autoActivate by settings.autoActivateProfiles.collectAsState(initial = true)
@@ -300,18 +276,40 @@ class SettingsActivity : ComponentActivity() {
                 }
             }
         }
+      }
     }
+}
+
+@Composable
+private fun SettingsHeader(text: String) {
+    val designLanguage = LocalDesignLanguage.current
+    val isDark = LocalIsDark.current
+    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = if (isGlassDark) FontWeight.Bold else null,
+        color = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
+    )
 }
 
 @Composable
 private fun DesignLanguageSelector(current: DesignLanguage, onSelect: (DesignLanguage) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Text("Design", style = MaterialTheme.typography.titleMedium)
+        SettingsHeader("Design")
         Spacer(modifier = Modifier.height(4.dp))
+        val bodyMedium = MaterialTheme.typography.bodyMedium
+        val subtextStyle = bodyMedium.copy(fontSize = (bodyMedium.fontSize.value - 2).sp)
+        val designLanguage = LocalDesignLanguage.current
+        val isDark = LocalIsDark.current
+        val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+        val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+
         Text(
             "Each option changes color, shape, and type together — not just a tint",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            style = subtextStyle,
+            color = subtextColor
         )
         Spacer(modifier = Modifier.height(10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -339,6 +337,15 @@ private fun DesignLanguageSelector(current: DesignLanguage, onSelect: (DesignLan
 
 @Composable
 private fun DesignLanguageOption(title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) {
+    val designLanguage = LocalDesignLanguage.current
+    val isDark = LocalIsDark.current
+    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+
+    val titleColor = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleWeight = if (isGlassDark) FontWeight.Bold else null
+    val subtextStyle = MaterialTheme.typography.bodyMedium
+    val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -353,11 +360,11 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
         RadioButton(selected = selected, onClick = onClick)
         Spacer(modifier = Modifier.width(4.dp))
         Column {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = titleWeight, color = titleColor)
             Text(
                 subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                style = subtextStyle,
+                color = subtextColor
             )
         }
     }
@@ -366,7 +373,7 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
 @Composable
 private fun ThemeModeSelector(current: MinimThemeMode, onSelect: (MinimThemeMode) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Text("Light / dark", style = MaterialTheme.typography.titleMedium)
+        SettingsHeader("Light / dark")
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(MinimThemeMode.SYSTEM to "System", MinimThemeMode.LIGHT to "Light", MinimThemeMode.DARK to "Dark")
@@ -380,7 +387,7 @@ private fun ThemeModeSelector(current: MinimThemeMode, onSelect: (MinimThemeMode
 @Composable
 private fun AccentPicker(current: String, onSelect: (String) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Text("Accent color", style = MaterialTheme.typography.titleMedium)
+        SettingsHeader("Accent color")
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AccentOptions.forEach { (name, color) ->
@@ -402,30 +409,88 @@ private fun AccentPicker(current: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun BackupRow(onExport: () -> Unit) {
+private fun SettingsCard(
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    val designLanguage = LocalDesignLanguage.current
+    val shape = MaterialTheme.shapes.medium
+    val isDark = LocalIsDark.current
+    val isGlassDark = designLanguage == DesignLanguage.GLASS && isDark
+
+    var modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 10.dp, vertical = 6.dp)
+        .clip(shape)
+
+    if (!isDark) {
+        val borderColor = when (designLanguage) {
+            DesignLanguage.GLASS -> Color(0xFF409CFF) // light blue
+            DesignLanguage.ANDROID_16 -> MaterialTheme.colorScheme.primary // accent color / primary color
+            DesignLanguage.NOTHING -> Color(0xFFFF6B6B).copy(alpha = 0.7f) // light red
+        }
+        modifier = modifier
+            .background(Color.Transparent)
+            .border(1.dp, borderColor, shape)
+    } else {
+        modifier = modifier.background(MaterialTheme.colorScheme.surface)
+        if (designLanguage == DesignLanguage.NOTHING) {
+            modifier = modifier.border(1.dp, Color.White, shape)
+        }
+    }
+
+    if (onClick != null) {
+        modifier = modifier.clickable(onClick = onClick)
+    }
+
+    modifier = modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+
+    val titleColor = if (isGlassDark) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleWeight = if (isGlassDark) FontWeight.Bold else null
+    val subtextStyle = MaterialTheme.typography.bodyMedium
+    val subtextColor = if (isGlassDark) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onExport)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text("Export settings", style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Save your setup as a file so it's never trapped on one device",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = titleWeight,
+                color = titleColor
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = subtextStyle,
+                color = subtextColor
+            )
+        }
+        if (trailing != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            trailing()
         }
     }
 }
 
 @Composable
+private fun BackupRow(onExport: () -> Unit) {
+    SettingsCard(
+        title = "Export settings",
+        subtitle = "Save your setup as a file so it's never trapped on one device",
+        onClick = onExport
+    )
+}
+
+@Composable
 private fun IconShapeSelector(current: String, onSelect: (String) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Text("Icon shape", style = MaterialTheme.typography.titleMedium)
+        SettingsHeader("Icon shape")
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("circle" to "Circle", "squircle" to "Squircle", "roundedSquare" to "Rounded square")
@@ -438,47 +503,64 @@ private fun IconShapeSelector(current: String, onSelect: (String) -> Unit) {
 
 @Composable
 private fun NotificationBadgesRow(listenerGranted: Boolean, onOpenSystemSettings: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpenSystemSettings)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text("Notification badge access", style = MaterialTheme.typography.titleMedium)
-            Text(
-                if (listenerGranted) {
-                    "Granted — dot badges will show on apps with notifications"
-                } else {
-                    "Not granted — tap to open system settings and allow access"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    SettingsCard(
+        title = "Notification badge access",
+        subtitle = if (listenerGranted) {
+            "Granted — dot badges will show on apps with notifications"
+        } else {
+            "Not granted — tap to open system settings and allow access"
+        },
+        onClick = onOpenSystemSettings
+    )
+}
+
+@Composable
+private fun NothingSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val designLanguage = LocalDesignLanguage.current
+    if (designLanguage == DesignLanguage.NOTHING) {
+        val thumbOffset by animateDpAsState(
+            targetValue = if (checked) 24.dp else 0.dp,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            label = "switchThumb"
+        )
+        Box(
+            modifier = Modifier
+                .width(52.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .border(
+                    width = 1.5.dp,
+                    color = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onCheckedChange(!checked) }
+                .padding(4.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Box(
+                modifier = Modifier
+                    .offset(x = thumbOffset)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(if (checked) Color.White else MaterialTheme.colorScheme.outline)
             )
         }
+    } else {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
 @Composable
 private fun SettingsToggleRow(item: ToggleItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                item.subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-            )
+    SettingsCard(
+        title = item.title,
+        subtitle = item.subtitle,
+        trailing = {
+            NothingSwitch(checked = item.checked, onCheckedChange = item.onToggle)
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Switch(checked = item.checked, onCheckedChange = item.onToggle)
-    }
+    )
 }
