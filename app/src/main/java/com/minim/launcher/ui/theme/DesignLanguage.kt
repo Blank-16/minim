@@ -41,3 +41,4 @@ enum class DesignLanguage {
 }
 
 val LocalDesignLanguage = compositionLocalOf { DesignLanguage.NOTHING }
+val LocalIsDark = compositionLocalOf { false }

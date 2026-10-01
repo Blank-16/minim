@@ -22,11 +22,18 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.minim.launcher.data.AppInfo
+import com.minim.launcher.ui.theme.DesignLanguage
+import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.util.WallpaperColorDetector
 
 private val SWIPE_REVEAL_DP = 72.dp
 
@@ -66,10 +73,12 @@ fun AppRow(
     }
 
     Box(modifier = modifier.fillMaxWidth()) {
-        if (quickActionType != null) {
+        if (quickActionType != null && animatedOffset < 0f) {
+            val alpha = (-animatedOffset / revealPx).coerceIn(0f, 1f)
             Row(
                 modifier = Modifier
                     .matchParentSize()
+                    .graphicsLayer { this.alpha = alpha }
                     .padding(end = 16.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
@@ -90,7 +99,6 @@ fun AppRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { translationX = animatedOffset }
-                .background(MaterialTheme.colorScheme.background)
                 .pointerInput(app.packageName, quickActionType) {
                     if (quickActionType == null) return@pointerInput
                     var revealed = false
@@ -122,7 +130,7 @@ fun AppRow(
                         }
                     )
                 }
-                .padding(horizontal = 24.dp, vertical = 13.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (showIcon) {
@@ -134,16 +142,20 @@ fun AppRow(
                 Spacer(modifier = Modifier.width(16.dp))
             }
 
+            val language = LocalDesignLanguage.current
+            val textColor = MaterialTheme.colorScheme.onBackground
+
+            val textStyle = MaterialTheme.typography.bodyLarge
+
             Text(
                 text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
+                style = textStyle,
+                color = textColor,
                 maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
 
             if (hasNotification) {
-                val language = com.minim.launcher.ui.theme.LocalDesignLanguage.current
                 val badgeShape = if (language == com.minim.launcher.ui.theme.DesignLanguage.NOTHING) {
                     RectangleShape
                 } else {

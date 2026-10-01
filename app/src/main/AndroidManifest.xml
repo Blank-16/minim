@@ -23,6 +23,10 @@
          line under the clock, never uploaded anywhere. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- Permissions for custom launcher wallpaper interaction and scroll hints -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+
     <application
         android:name=".MinimApplication"
         android:allowBackup="true"
@@ -53,22 +57,22 @@
         <activity
             android:name=".ui.screens.SettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Minim" />
+            android:theme="@style/Theme.Minim.NoActionBar" />
 
         <activity
             android:name=".ui.screens.SpacesActivity"
             android:exported="false"
-            android:theme="@style/Theme.Minim" />
+            android:theme="@style/Theme.Minim.NoActionBar" />
 
         <activity
             android:name=".ui.screens.GesturesActivity"
             android:exported="false"
-            android:theme="@style/Theme.Minim" />
+            android:theme="@style/Theme.Minim.NoActionBar" />
 
         <activity
             android:name=".ui.screens.HiddenAppsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Minim" />
+            android:theme="@style/Theme.Minim.NoActionBar" />
 
         <!-- Listens for install/uninstall/update so the Room cache stays in sync
              without ever polling PackageManager on a timer. -->
