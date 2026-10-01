@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ import com.minim.launcher.MinimApplication
 import com.minim.launcher.ui.theme.AccentOptions
 import com.minim.launcher.ui.theme.DesignLanguage
 import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 import com.minim.launcher.ui.theme.MinimTheme
 import com.minim.launcher.ui.theme.MinimThemeMode
 import com.minim.launcher.util.CalendarPeek
@@ -155,10 +157,10 @@ class SettingsActivity : ComponentActivity() {
                     dynamicColor = dynamicColor,
                     accentColor = AccentOptions[accentName] ?: AccentOptions.getValue("Red")
                 ) {
-                    val surfaceColor = if (designLanguage == DesignLanguage.GLASS) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.background
+                    val surfaceColor = when {
+                        designLanguage == DesignLanguage.GLASS -> Color.Transparent
+                        !isDark -> Color(0xFFF4F5F8)
+                        else -> MaterialTheme.colorScheme.background
                     }
                     Surface(
                         modifier = Modifier.fillMaxSize(),
@@ -170,7 +172,7 @@ class SettingsActivity : ComponentActivity() {
                                 title = {
                                     Text(
                                         "Settings",
-                                        color = if (designLanguage == DesignLanguage.GLASS) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = if (designLanguage == DesignLanguage.GLASS) FontWeight.Bold else null
                                     )
                                 },
@@ -179,7 +181,7 @@ class SettingsActivity : ComponentActivity() {
                                         Icon(
                                             Icons.Filled.ArrowBack,
                                             contentDescription = "Back",
-                                            tint = if (designLanguage == DesignLanguage.GLASS) Color.White else MaterialTheme.colorScheme.onSurface
+                                            tint = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                 },
@@ -310,7 +312,7 @@ private fun SettingsHeader(text: String) {
         text = text,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = if (isGlass) FontWeight.Bold else null,
-        color = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
+        color = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -321,9 +323,7 @@ private fun DesignLanguageSelector(current: DesignLanguage, onSelect: (DesignLan
         Spacer(modifier = Modifier.height(4.dp))
         val bodyMedium = MaterialTheme.typography.bodyMedium
         val subtextStyle = bodyMedium.copy(fontSize = (bodyMedium.fontSize.value - 2).sp)
-        val designLanguage = LocalDesignLanguage.current
-        val isGlass = designLanguage == DesignLanguage.GLASS
-        val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        val subtextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
 
         Text(
             "Each option changes color, shape, and type together — not just a tint",
@@ -359,16 +359,12 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
     val designLanguage = LocalDesignLanguage.current
     val isGlass = designLanguage == DesignLanguage.GLASS
 
-    val titleColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleColor = MaterialTheme.colorScheme.onBackground
     val titleWeight = if (isGlass) FontWeight.Bold else null
     val subtextStyle = MaterialTheme.typography.bodyMedium
-    val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    val subtextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
 
-    val optionBgColor = if (isGlass) {
-        if (selected) Color.White.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.12f)
-    } else {
-        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
-    }
+    val optionBgColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
 
     Row(
         modifier = Modifier
@@ -381,11 +377,7 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
     ) {
         RadioButton(
             selected = selected,
-            onClick = onClick,
-            colors = if (isGlass) RadioButtonDefaults.colors(
-                selectedColor = Color.White,
-                unselectedColor = Color.White.copy(alpha = 0.6f)
-            ) else RadioButtonDefaults.colors()
+            onClick = onClick
         )
         Spacer(modifier = Modifier.width(4.dp))
         Column {
@@ -401,14 +393,6 @@ private fun DesignLanguageOption(title: String, subtitle: String, selected: Bool
 
 @Composable
 private fun ThemeModeSelector(current: MinimThemeMode, onSelect: (MinimThemeMode) -> Unit) {
-    val isGlass = LocalDesignLanguage.current == DesignLanguage.GLASS
-    val chipColors = if (isGlass) FilterChipDefaults.filterChipColors(
-        containerColor = Color.White.copy(alpha = 0.12f),
-        labelColor = Color.White.copy(alpha = 0.8f),
-        selectedContainerColor = Color.White.copy(alpha = 0.35f),
-        selectedLabelColor = Color.White
-    ) else FilterChipDefaults.filterChipColors()
-
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         SettingsHeader("Light / dark")
         Spacer(modifier = Modifier.height(8.dp))
@@ -418,8 +402,7 @@ private fun ThemeModeSelector(current: MinimThemeMode, onSelect: (MinimThemeMode
                     FilterChip(
                         selected = current == mode,
                         onClick = { onSelect(mode) },
-                        label = { Text(label) },
-                        colors = chipColors
+                        label = { Text(label) }
                     )
                 }
         }
@@ -465,21 +448,33 @@ private fun SettingsCard(
     var modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 10.dp, vertical = 6.dp)
-        .clip(shape)
 
     if (isGlass) {
-        modifier = modifier.background(Color.White.copy(alpha = 0.16f))
-    } else if (!isDark) {
-        val borderColor = when (designLanguage) {
-            DesignLanguage.ANDROID_16 -> MaterialTheme.colorScheme.primary
-            DesignLanguage.NOTHING -> Color(0xFFFF6B6B).copy(alpha = 0.7f)
-            else -> Color.Transparent
-        }
         modifier = modifier
-            .background(Color.Transparent)
-            .border(1.dp, borderColor, shape)
+            .clip(shape)
+            .background(if (isDark) Color(0x991C1C1E) else Color.White.copy(alpha = 0.16f))
+    } else if (!isDark) {
+        if (designLanguage == DesignLanguage.ANDROID_16) {
+            modifier = modifier
+                .shadow(
+                    elevation = 2.dp,
+                    shape = shape,
+                    spotColor = Color(0x1F000000),
+                    ambientColor = Color(0x0F000000)
+                )
+                .background(Color.White, shape = shape)
+                .clip(shape)
+        } else {
+            val borderColor = if (designLanguage == DesignLanguage.NOTHING) Color(0xFFFF6B6B).copy(alpha = 0.7f) else Color.Transparent
+            modifier = modifier
+                .clip(shape)
+                .background(Color.Transparent)
+                .border(if (borderColor != Color.Transparent) 1.dp else 0.dp, borderColor, shape)
+        }
     } else {
-        modifier = modifier.background(MaterialTheme.colorScheme.surface)
+        modifier = modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface)
         if (designLanguage == DesignLanguage.NOTHING) {
             modifier = modifier.border(1.dp, Color.White, shape)
         }
@@ -491,10 +486,10 @@ private fun SettingsCard(
 
     modifier = modifier.padding(horizontal = 16.dp, vertical = 14.dp)
 
-    val titleColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onBackground
+    val titleColor = MaterialTheme.colorScheme.onBackground
     val titleWeight = if (isGlass) FontWeight.Bold else null
     val subtextStyle = MaterialTheme.typography.bodyMedium
-    val subtextColor = if (isGlass) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    val subtextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
 
     Row(
         modifier = modifier,
@@ -533,14 +528,6 @@ private fun BackupRow(onExport: () -> Unit) {
 
 @Composable
 private fun IconShapeSelector(current: String, onSelect: (String) -> Unit) {
-    val isGlass = LocalDesignLanguage.current == DesignLanguage.GLASS
-    val chipColors = if (isGlass) FilterChipDefaults.filterChipColors(
-        containerColor = Color.White.copy(alpha = 0.12f),
-        labelColor = Color.White.copy(alpha = 0.8f),
-        selectedContainerColor = Color.White.copy(alpha = 0.35f),
-        selectedLabelColor = Color.White
-    ) else FilterChipDefaults.filterChipColors()
-
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         SettingsHeader("Icon shape")
         Spacer(modifier = Modifier.height(8.dp))
@@ -550,8 +537,7 @@ private fun IconShapeSelector(current: String, onSelect: (String) -> Unit) {
                     FilterChip(
                         selected = current == value,
                         onClick = { onSelect(value) },
-                        label = { Text(label) },
-                        colors = chipColors
+                        label = { Text(label) }
                     )
                 }
         }

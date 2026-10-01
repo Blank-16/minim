@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -66,8 +67,8 @@ private val Android16Light = lightColorScheme(
 private val GlassDark = darkColorScheme(
     background = Color.Transparent,
     surface = Color(0x33FFFFFF), // translucent white panel over blurred wallpaper
-    onBackground = Color(0xFFFFFFFF),
-    onSurface = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF000000),
+    onSurface = Color(0xFF000000),
     primary = Color(0xFF0A84FF), // iOS system blue
     secondary = Color(0xFFEBEBF5)
 )
@@ -150,7 +151,10 @@ fun MinimTheme(
         }
     }
 
-    CompositionLocalProvider(LocalDesignLanguage provides designLanguage) {
+    CompositionLocalProvider(
+        LocalDesignLanguage provides designLanguage,
+        LocalIsDark provides useDark
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = typographyFor(designLanguage),

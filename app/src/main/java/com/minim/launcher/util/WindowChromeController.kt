@@ -32,15 +32,11 @@ object WindowChromeController {
                 window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
                 window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    window.attributes = window.attributes.apply {
-                        blurBehindRadius = 110
-                    }
                     window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    window.attributes = window.attributes.apply {
+                        blurBehindRadius = 80
+                    }
                 }
-                // Pre-API 31: no native blur behind is available. The
-                // translucent panel colors in GlassDark/GlassLight still show
-                // the live (unblurred) wallpaper through, which is a
-                // reasonable, honest degradation rather than a fake blur.
             }
             DesignLanguage.NOTHING, DesignLanguage.ANDROID_16 -> {
                 window.clearFlags(
