@@ -3,15 +3,13 @@ package com.minim.launcher.ui.screens
 import android.view.View
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.minim.launcher.data.AppInfo
 import com.minim.launcher.ui.components.*
@@ -29,10 +27,10 @@ fun HomeScreen(
     activeProfileName: String? = null,
     onClockLongClick: () -> Unit = {},
     calendarPeekText: String? = null,
-    appWidgetId: Int = -1,
+    appWidgetIds: List<Int> = emptyList(),
     createWidgetHostView: (Int) -> View? = { null },
     onAddWidget: () -> Unit = {},
-    onRemoveWidget: () -> Unit = {},
+    onRemoveWidget: (Int) -> Unit = {},
     quickToggles: List<QuickToggle>,
     onToggleWidget: () -> Unit,
     onClockClick: () -> Unit,
@@ -47,207 +45,232 @@ fun HomeScreen(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
 
     val visibleApps = state.filteredApps
     val availableLetters = remember(visibleApps) {
         visibleApps.map { it.indexLetter }.toSet()
     }
-    val letterIndexMap = remember(visibleApps) {
-        val map = LinkedHashMap<Char, Int>()
-        visibleApps.forEachIndexed { i, app -> map.putIfAbsent(app.indexLetter, i) }
-        map
+
+    // Calculate item index offset in LazyColumn where "All apps" items begin
+    val allAppsHeaderItemIndex = remember(
+        state.searchQuery,
+        state.recentlyInstalled,
+        state.showSuggestions,
+        state.suggestions,
+        state.favorites
+    ) {
+        if (state.searchQuery.isNotBlank()) {
+            0
+        } else {
+            var count = 0
+            if (state.recentlyInstalled.isNotEmpty()) {
+                count += 1 + state.recentlyInstalled.size
+            }
+            if (state.showSuggestions && state.suggestions.isNotEmpty()) {
+                count += 1 + state.suggestions.size
+            }
+            if (state.favorites.isNotEmpty()) {
+                count += 1 + state.favorites.size
+            }
+            count
+        }
     }
 
-    Row(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            // Pinned top section (Clock, Search, QuickSettings)
-            if (showClock && state.searchQuery.isBlank()) {
-                ClockHeader(
-                    activeProfileName = activeProfileName,
-                    infoLine = calendarPeekText,
-                    onClick = onClockClick,
-                    onLongClick = onClockLongClick
-                )
-            }
-
-            SearchField(
-                query = state.searchQuery,
-                onQueryChange = onQueryChange,
-                onSearch = { }
+    Column(modifier = modifier.fillMaxSize()) {
+        // Pinned top section (Clock, Search, QuickSettings, Widget)
+        if (showClock && state.searchQuery.isBlank()) {
+            ClockHeader(
+                activeProfileName = activeProfileName,
+                infoLine = calendarPeekText,
+                onClick = onClockClick,
+                onLongClick = onClockLongClick
             )
+        }
 
-            if (showQuickSettings && state.searchQuery.isBlank() && quickToggles.isNotEmpty()) {
-                QuickSettingsRow(toggles = quickToggles)
-            }
+        SearchField(
+            query = state.searchQuery,
+            onQueryChange = onQueryChange,
+            onSearch = { }
+        )
 
-            // Scrolling apps list (LazyColumn with widget, section headers and cards) taking remaining height
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)
-            ) {
-                if (state.searchQuery.isBlank()) {
-                    item {
-                        WidgetSpace(
-                            collapsed = widgetCollapsed,
-                            onToggleCollapsed = onToggleWidget,
-                            appWidgetId = appWidgetId,
-                            createHostView = createWidgetHostView,
-                            onAddWidget = onAddWidget,
-                            onRemoveWidget = onRemoveWidget
-                        )
-                    }
-                }
-
-                if (state.searchQuery.isBlank() && state.recentlyInstalled.isNotEmpty()) {
-                    item {
-                        SectionLabel("Recently installed")
-                    }
-                    item {
-                        AdaptiveSurface(
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 4.dp)
-                        ) {
-                            Column {
-                                state.recentlyInstalled.forEachIndexed { index, app ->
-                                    AppRow(
-                                        app = app, showIcon = state.showIcons, iconLoader = iconLoader,
-                                        hasNotification = app.packageName in notificationPackages,
-                                        hapticsEnabled = state.hapticsEnabled,
-                                        iconShapeName = state.iconShape,
-                                        onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
-                                        onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
-                                    )
-                                    if (index < state.recentlyInstalled.lastIndex) {
-                                        HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                            thickness = 0.5.dp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (state.searchQuery.isBlank() && state.showSuggestions && state.suggestions.isNotEmpty()) {
-                    item {
-                        SectionLabel("Suggested")
-                    }
-                    item {
-                        AdaptiveSurface(
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 4.dp)
-                        ) {
-                            Column {
-                                state.suggestions.forEachIndexed { index, app ->
-                                    AppRow(
-                                        app = app, showIcon = state.showIcons, iconLoader = iconLoader,
-                                        hasNotification = app.packageName in notificationPackages,
-                                        hapticsEnabled = state.hapticsEnabled,
-                                        iconShapeName = state.iconShape,
-                                        onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
-                                        onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
-                                    )
-                                    if (index < state.suggestions.lastIndex) {
-                                        HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                            thickness = 0.5.dp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (state.searchQuery.isBlank() && state.favorites.isNotEmpty()) {
-                    item {
-                        SectionLabel("Favorites")
-                    }
-                    item {
-                        AdaptiveSurface(
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 4.dp)
-                        ) {
-                            Column {
-                                state.favorites.forEachIndexed { index, app ->
-                                    AppRow(
-                                        app = app, showIcon = state.showIcons, iconLoader = iconLoader,
-                                        hasNotification = app.packageName in notificationPackages,
-                                        hapticsEnabled = state.hapticsEnabled,
-                                        iconShapeName = state.iconShape,
-                                        onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
-                                        onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
-                                    )
-                                    if (index < state.favorites.lastIndex) {
-                                        HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                            thickness = 0.5.dp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (visibleApps.isNotEmpty()) {
-                    item {
-                        SectionLabel(if (state.searchQuery.isBlank()) "All apps" else "Results")
-                    }
-                    item {
-                        AdaptiveSurface(
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 4.dp)
-                        ) {
-                            Column {
-                                visibleApps.forEachIndexed { index, app ->
-                                    AppRow(
-                                        app = app, showIcon = state.showIcons, iconLoader = iconLoader,
-                                        hasNotification = app.packageName in notificationPackages,
-                                        hapticsEnabled = state.hapticsEnabled,
-                                        iconShapeName = state.iconShape,
-                                        onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
-                                        onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
-                                    )
-                                    if (index < visibleApps.lastIndex) {
-                                        HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                            thickness = 0.5.dp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        if (showQuickSettings && state.searchQuery.isBlank() && quickToggles.isNotEmpty()) {
+            QuickSettingsRow(toggles = quickToggles)
         }
 
         if (state.searchQuery.isBlank()) {
-            val appRowHeightPx = with(density) { 60.dp.toPx() }
-            val allAppsItemIndex = listOf(
-                true,
-                state.recentlyInstalled.isNotEmpty(),
-                state.recentlyInstalled.isNotEmpty(),
-                state.showSuggestions && state.suggestions.isNotEmpty(),
-                state.showSuggestions && state.suggestions.isNotEmpty(),
-                state.favorites.isNotEmpty(),
-                state.favorites.isNotEmpty()
-            ).count { it }
-
-            AlphabetIndexBar(
-                availableLetters = availableLetters,
-                onLetterSelected = { letter ->
-                    letterIndexMap[letter]?.let { targetIndex ->
-                        val scrollOffset = (targetIndex * appRowHeightPx).toInt()
-                        scope.launch {
-                            listState.scrollToItem(allAppsItemIndex, scrollOffset)
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxHeight()
+            WidgetSpace(
+                collapsed = widgetCollapsed,
+                onToggleCollapsed = onToggleWidget,
+                appWidgetIds = appWidgetIds,
+                createHostView = createWidgetHostView,
+                onAddWidget = onAddWidget,
+                onRemoveWidget = onRemoveWidget
             )
         }
+
+        // Lower section: App list container and Alphabet Index side by side below the widget container
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            // Fixed container for the apps list: scrolling moves only app names & icons inside this container
+            AdaptiveSurface(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(
+                        start = 20.dp,
+                        end = if (state.searchQuery.isBlank()) 0.dp else 20.dp,
+                        top = 4.dp,
+                        bottom = 12.dp
+                    )
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)
+                ) {
+                    if (state.searchQuery.isBlank() && state.recentlyInstalled.isNotEmpty()) {
+                        item(key = "header_recently_installed") {
+                            SectionLabel("Recently installed")
+                        }
+                        itemsIndexed(
+                            items = state.recentlyInstalled,
+                            key = { _, app -> "recent_${app.packageName}" }
+                        ) { index, app ->
+                            AppRow(
+                                app = app, showIcon = state.showIcons, iconLoader = iconLoader,
+                                hasNotification = app.packageName in notificationPackages,
+                                hapticsEnabled = state.hapticsEnabled,
+                                iconShapeName = state.iconShape,
+                                onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
+                                onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
+                            )
+                            if (index < state.recentlyInstalled.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.searchQuery.isBlank() && state.showSuggestions && state.suggestions.isNotEmpty()) {
+                        item(key = "header_suggestions") {
+                            SectionLabel("Suggested")
+                        }
+                        itemsIndexed(
+                            items = state.suggestions,
+                            key = { _, app -> "suggested_${app.packageName}" }
+                        ) { index, app ->
+                            AppRow(
+                                app = app, showIcon = state.showIcons, iconLoader = iconLoader,
+                                hasNotification = app.packageName in notificationPackages,
+                                hapticsEnabled = state.hapticsEnabled,
+                                iconShapeName = state.iconShape,
+                                onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
+                                onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
+                            )
+                            if (index < state.suggestions.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.searchQuery.isBlank() && state.favorites.isNotEmpty()) {
+                        item(key = "header_favorites") {
+                            SectionLabel("Favorites")
+                        }
+                        itemsIndexed(
+                            items = state.favorites,
+                            key = { _, app -> "favorite_${app.packageName}" }
+                        ) { index, app ->
+                            AppRow(
+                                app = app, showIcon = state.showIcons, iconLoader = iconLoader,
+                                hasNotification = app.packageName in notificationPackages,
+                                hapticsEnabled = state.hapticsEnabled,
+                                iconShapeName = state.iconShape,
+                                onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
+                                onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
+                            )
+                            if (index < state.favorites.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (visibleApps.isNotEmpty()) {
+                        item(key = "header_all_apps") {
+                            SectionLabel(if (state.searchQuery.isBlank()) "All apps" else "Results")
+                        }
+                        itemsIndexed(
+                            items = visibleApps,
+                            key = { _, app -> "all_${app.packageName}" }
+                        ) { index, app ->
+                            AppRow(
+                                app = app, showIcon = state.showIcons, iconLoader = iconLoader,
+                                hasNotification = app.packageName in notificationPackages,
+                                hapticsEnabled = state.hapticsEnabled,
+                                iconShapeName = state.iconShape,
+                                onClick = { onAppClick(app) }, onLongClick = { onAppLongClick(app) },
+                                onQuickAction = { onQuickAction(app) }, quickActionType = quickActionFor(app)
+                            )
+                            if (index < visibleApps.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (state.searchQuery.isBlank()) {
+                AlphabetIndexBar(
+                    availableLetters = availableLetters,
+                    onLetterSelected = { letter ->
+                        val targetIndex = findTargetAppIndex(letter, visibleApps)
+                        if (targetIndex != null) {
+                            val targetItemIndex = allAppsHeaderItemIndex + 1 + targetIndex
+                            scope.launch {
+                                listState.scrollToItem(targetItemIndex)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxHeight()
+                )
+            }
+        }
     }
+}
+
+private fun findTargetAppIndex(targetLetter: Char, visibleApps: List<AppInfo>): Int? {
+    if (visibleApps.isEmpty()) return null
+
+    if (targetLetter == '#') {
+        val nonAlphaIndex = visibleApps.indexOfFirst { it.indexLetter == '#' }
+        return if (nonAlphaIndex != -1) nonAlphaIndex else 0
+    }
+
+    val exactMatchIndex = visibleApps.indexOfFirst { it.indexLetter == targetLetter }
+    if (exactMatchIndex != -1) return exactMatchIndex
+
+    val nextMatchIndex = visibleApps.indexOfFirst { it.indexLetter > targetLetter }
+    if (nextMatchIndex != -1) return nextMatchIndex
+
+    return visibleApps.lastIndex
 }
 
 @Composable
@@ -268,6 +291,6 @@ private fun SectionLabel(text: String) {
         text = displayText,
         style = textStyle,
         color = textColor,
-        modifier = Modifier.padding(start = 24.dp, top = 20.dp, end = 24.dp, bottom = 4.dp)
+        modifier = Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 4.dp)
     )
 }

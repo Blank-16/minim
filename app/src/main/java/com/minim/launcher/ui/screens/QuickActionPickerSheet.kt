@@ -14,6 +14,7 @@ import com.minim.launcher.data.AppInfo
 import com.minim.launcher.ui.components.AdaptiveSurface
 import com.minim.launcher.ui.theme.DesignLanguage
 import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +42,8 @@ fun QuickActionPickerSheet(
 
     val language = LocalDesignLanguage.current
     val isGlass = language == DesignLanguage.GLASS
-    val textColor = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+    val isDark = LocalIsDark.current
+    val textColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -65,8 +67,8 @@ fun QuickActionPickerSheet(
                                 selected = mode == value,
                                 onClick = { mode = value },
                                 colors = if (isGlass) RadioButtonDefaults.colors(
-                                    selectedColor = Color.Black,
-                                    unselectedColor = Color.Black.copy(alpha = 0.6f)
+                                    selectedColor = if (isDark) Color.White else Color.Black,
+                                    unselectedColor = if (isDark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)
                                 ) else RadioButtonDefaults.colors()
                             )
                             Spacer(modifier = Modifier.width(8.dp))

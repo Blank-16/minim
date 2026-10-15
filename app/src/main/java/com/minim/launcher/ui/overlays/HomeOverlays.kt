@@ -1,7 +1,9 @@
 package com.minim.launcher.ui.overlays
 
+import android.appwidget.AppWidgetProviderInfo
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -10,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.minim.launcher.data.AppInfo
 import com.minim.launcher.data.db.SpaceEntity
@@ -17,6 +20,8 @@ import com.minim.launcher.ui.screens.AppContextSheet
 import com.minim.launcher.ui.screens.ProfileSwitcherSheet
 import com.minim.launcher.ui.screens.QuickActionPickerSheet
 import com.minim.launcher.ui.screens.SpacePickerSheet
+import com.minim.launcher.ui.screens.WidgetPickerSheet
+import com.minim.launcher.util.WidgetHostManager
 
 /**
  * Everything that floats on top of the home screen — the four contextual
@@ -52,6 +57,14 @@ fun BoxScope.HomeOverlays(
     onSelectProfile: (String?) -> Unit,
     onManageSpaces: () -> Unit,
     onDismissProfileSwitcher: () -> Unit,
+
+    showWidgetPicker: Boolean = false,
+    widgetHostManager: WidgetHostManager? = null,
+    iconLoader: (suspend (String) -> Any?)? = null,
+    iconShape: Shape = CircleShape,
+    onDismissWidgetPicker: () -> Unit = {},
+    onWidgetSelected: (AppWidgetProviderInfo) -> Unit = {},
+    onOpenSystemPicker: () -> Unit = {},
 
     onOpenSettings: () -> Unit
 ) {
@@ -93,6 +106,17 @@ fun BoxScope.HomeOverlays(
             onSelect = onSelectProfile,
             onManageSpaces = onManageSpaces,
             onDismiss = onDismissProfileSwitcher
+        )
+    }
+
+    if (showWidgetPicker && widgetHostManager != null && iconLoader != null) {
+        WidgetPickerSheet(
+            widgetHostManager = widgetHostManager,
+            iconLoader = iconLoader,
+            iconShape = iconShape,
+            onDismiss = onDismissWidgetPicker,
+            onWidgetSelected = onWidgetSelected,
+            onOpenSystemPicker = onOpenSystemPicker
         )
     }
 

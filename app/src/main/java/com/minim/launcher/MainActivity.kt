@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         systemToggles = SystemToggleController(this)
         widgetHostManager = WidgetHostManager(this)
         widgetPicker = WidgetPickerController(this, widgetHostManager) { appWidgetId ->
-            lifecycleScope.launch { app.settingsRepository.setWidgetAppWidgetId(appWidgetId) }
+            lifecycleScope.launch { app.settingsRepository.addWidgetAppWidgetId(appWidgetId) }
         }
         gestureDispatcher = GestureDispatcher(
             onLock = ::lockScreen,
@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
             var quickActionPickerApp by remember { mutableStateOf<AppInfo?>(null) }
             var spacePickerApp by remember { mutableStateOf<AppInfo?>(null) }
             var showProfileSwitcher by remember { mutableStateOf(false) }
+            var showWidgetPicker by remember { mutableStateOf(false) }
 
             MinimTheme(
                 designLanguage = appearance.designLanguage,
@@ -179,10 +180,13 @@ class MainActivity : ComponentActivity() {
                         activeProfileName = activeProfile?.name,
                         onClockLongClick = { showProfileSwitcher = true },
                         calendarPeekText = calendarPeekText,
-                        appWidgetId = screenSettings.appWidgetId,
+                        appWidgetIds = screenSettings.appWidgetIds,
                         createWidgetHostView = { id -> widgetHostManager.createHostView(id) },
-                        onAddWidget = widgetPicker::launchPicker,
-                        onRemoveWidget = { widgetPicker.remove(screenSettings.appWidgetId) },
+                        onAddWidget = { showWidgetPicker = true },
+                        onRemoveWidget = { idToRemove ->
+                            widgetPicker.remove(idToRemove)
+                            lifecycleScope.launch { app.settingsRepository.removeWidgetAppWidgetId(idToRemove) }
+                        },
                         quickToggles = buildQuickToggles(torchActive) { torchActive = systemToggles.isTorchOn },
                         onToggleWidget = {
                             lifecycleScope.launch {
@@ -231,6 +235,13 @@ class MainActivity : ComponentActivity() {
                         onSelectProfile = { spaceId -> viewModel.activateProfile(spaceId) },
                         onManageSpaces = { startActivity(Intent(this@MainActivity, SpacesActivity::class.java)) },
                         onDismissProfileSwitcher = { showProfileSwitcher = false },
+
+                        showWidgetPicker = showWidgetPicker,
+                        widgetHostManager = widgetHostManager,
+                        iconLoader = { pkg -> app.iconLoader.load(pkg) },
+                        onDismissWidgetPicker = { showWidgetPicker = false },
+                        onWidgetSelected = { providerInfo -> widgetPicker.onWidgetSelected(providerInfo) },
+                        onOpenSystemPicker = { widgetPicker.launchPicker() },
 
                         onOpenSettings = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
                     )

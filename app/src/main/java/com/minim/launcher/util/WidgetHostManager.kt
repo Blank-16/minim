@@ -36,6 +36,12 @@ class WidgetHostManager(private val activity: Activity) {
     fun getProviderInfo(appWidgetId: Int): AppWidgetProviderInfo? =
         runCatching { appWidgetManager.getAppWidgetInfo(appWidgetId) }.getOrNull()
 
+    fun getInstalledProviders(): List<AppWidgetProviderInfo> =
+        runCatching { appWidgetManager.installedProviders }.getOrDefault(emptyList())
+
+    fun bindAppWidgetIdIfAllowed(appWidgetId: Int, providerInfo: AppWidgetProviderInfo): Boolean =
+        runCatching { appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, providerInfo.provider) }.getOrDefault(false)
+
     /** Null if the widget was uninstalled or the id is otherwise no longer valid. */
     fun createHostView(appWidgetId: Int): AppWidgetHostView? {
         val info = getProviderInfo(appWidgetId) ?: return null

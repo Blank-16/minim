@@ -37,7 +37,7 @@ fun SearchField(
     val textStyle = MaterialTheme.typography.bodyLarge.copy(
         color = MaterialTheme.colorScheme.onBackground
     )
-    Box(modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp)) {
+    Box(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
         BasicTextField(
             value = query,
             onValueChange = onQueryChange,

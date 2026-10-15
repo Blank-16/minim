@@ -16,6 +16,7 @@ import com.minim.launcher.data.db.SpaceEntity
 import com.minim.launcher.ui.components.AdaptiveSurface
 import com.minim.launcher.ui.theme.DesignLanguage
 import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +32,8 @@ fun SpacePickerSheet(
 
     val language = LocalDesignLanguage.current
     val isGlass = language == DesignLanguage.GLASS
-    val textColor = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+    val isDark = LocalIsDark.current
+    val textColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

@@ -62,7 +62,7 @@ fun ClockHeader(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 24.dp, vertical = 28.dp),
+            .padding(horizontal = 20.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.Start
     ) {
         Text(

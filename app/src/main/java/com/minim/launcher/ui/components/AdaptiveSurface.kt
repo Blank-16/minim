@@ -104,7 +104,7 @@ fun AdaptiveSurface(
             val baseCardColor = if (isDark) {
                 Color(0x991C1C1E)
             } else {
-                Color.White.copy(alpha = 0.85f)
+                Color.White
             }
 
             val highlightTop = if (isDark) {

@@ -9,6 +9,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -27,14 +28,16 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 
 private val DEFAULT_ALPHABET = listOf('#') + ('A'..'Z')
 
 /**
- * Niagara Launcher-style vertical alphabet index sidebar with compact height,
- * vertical centering, organic fisheye wave magnification, and frosted glass preview badge.
+ * Vertical alphabet index sidebar displaying all letters from # and A to Z.
+ * Each letter is clickable and draggable, triggering fast-scroll to that section
+ * with a dynamic fisheye wave effect and frosted glass letter badge.
  */
 @Composable
 fun NiagaraAlphabetSidebar(
@@ -52,12 +55,20 @@ fun NiagaraAlphabetSidebar(
     var componentHeight by remember { mutableFloatStateOf(1f) }
     var activeIndex by remember { mutableStateOf<Int?>(null) }
 
-    val maxRadiusPx = with(density) { 240.dp.toPx() }
-    val translationXDistance = with(density) { (-120).dp.toPx() }
+    val maxRadiusPx = with(density) { 180.dp.toPx() }
+    val maxTranslationXPx = with(density) { (-48).dp.toPx() }
 
-    // Smooth touch interaction state for bounce-back animation
+    // Keep badge and wave active briefly after touch release for smooth feedback
+    LaunchedEffect(isTouching) {
+        if (!isTouching) {
+            delay(800)
+            activeIndex = null
+        }
+    }
+
+    // Smooth touch interaction state for organic wave expansion and bounce-back
     val touchProgress by animateFloatAsState(
-        targetValue = if (isTouching) 1f else 0f,
+        targetValue = if (isTouching || activeIndex != null) 1f else 0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -79,7 +90,16 @@ fun NiagaraAlphabetSidebar(
     }
 
     // Position the preview badge directly at the cursor touch Y coordinate in real time
-    val targetBadgeYDp = with(density) { (columnTopOffset + currentTouchY - 32.dp.toPx()).toDp() }
+    val targetBadgeYDp = with(density) {
+        val selectedIdx = activeIndex
+        val calculatedY = if (selectedIdx != null && selectedIdx in items.indices) {
+            columnTopOffset + (selectedIdx + 0.5f) * itemHeight - 32.dp.toPx()
+        } else {
+            columnTopOffset + currentTouchY - 32.dp.toPx()
+        }
+        val maxY = (containerHeight - 64.dp.toPx()).coerceAtLeast(0f)
+        calculatedY.coerceIn(0f, maxY).toDp()
+    }
 
     val animatedBadgeY by animateDpAsState(
         targetValue = targetBadgeYDp,
@@ -94,114 +114,109 @@ fun NiagaraAlphabetSidebar(
         modifier = modifier
             .fillMaxHeight()
             .width(80.dp)
-            .onSizeChanged { containerHeight = it.height.toFloat() },
+            .onSizeChanged { containerHeight = it.height.toFloat() }
+            .pointerInput(items) {
+                fun updateFromY(y: Float) {
+                    if (items.isEmpty()) return
+                    val currentCompHeight = if (componentHeight > 1f) componentHeight else size.height.toFloat()
+                    if (currentCompHeight <= 0f) return
+                    val clampedY = y.coerceIn(0f, currentCompHeight)
+                    currentTouchY = clampedY
+                    val curItemHeight = currentCompHeight / items.size.toFloat()
+                    val index = (clampedY / curItemHeight)
+                        .toInt()
+                        .coerceIn(0, items.size - 1)
+                    
+                    if (index != activeIndex) {
+                        activeIndex = index
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onIndexSelected(index)
+                    }
+                }
+
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    isTouching = true
+                    updateFromY(down.position.y)
+                    down.consume()
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (change.pressed) {
+                            updateFromY(change.position.y)
+                            change.consume()
+                        } else {
+                            break
+                        }
+                    }
+                    isTouching = false
+                }
+            },
         contentAlignment = Alignment.CenterEnd
     ) {
-        // Compact vertically centered column (75% height) for high efficiency and easy thumb reach
+        // Column positioned right against the right screen edge (padding end = 6.dp)
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxHeight(0.75f)
-                .width(48.dp)
-                .padding(end = 6.dp)
-                .onSizeChanged { componentHeight = it.height.toFloat() }
-                .pointerInput(items) {
-                    fun updateFromY(y: Float) {
-                        if (items.isEmpty()) return
-                        val currentCompHeight = if (componentHeight > 1f) componentHeight else size.height.toFloat()
-                        if (currentCompHeight <= 0f) return
-                        val clampedY = y.coerceIn(0f, currentCompHeight)
-                        currentTouchY = clampedY
-                        val curItemHeight = currentCompHeight / items.size.toFloat()
-                        val index = (clampedY / curItemHeight)
-                            .toInt()
-                            .coerceIn(0, items.size - 1)
-                        
-                        if (index != activeIndex) {
-                            activeIndex = index
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onIndexSelected(index)
-                        }
-                    }
-
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull()
-                            if (change != null) {
-                                if (change.pressed) {
-                                    isTouching = true
-                                    updateFromY(change.position.y)
-                                    change.consume()
-                                } else {
-                                    isTouching = false
-                                    activeIndex = null
-                                }
-                            }
-                        }
-                    }
-                },
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(1.0f)
+                .padding(top = 8.dp, bottom = 8.dp, end = 6.dp)
+                .width(40.dp)
+                .onSizeChanged { componentHeight = it.height.toFloat() },
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.SpaceEvenly
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             val totalCount = items.size
             if (totalCount == 0) return@Column
 
             items.forEachIndexed { index, letter ->
                 val isAvailable = availableItems?.contains(letter) ?: true
+                val isSelected = activeIndex == index
                 val letterCenterY = (index + 0.5f) * itemHeight
                 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .wrapContentHeight()
+                        .weight(1f)
                         .graphicsLayer {
                             val touchY = currentTouchY
                             val progress = touchProgress
 
-                            if (progress <= 0.001f || componentHeight <= 0f) {
-                                scaleX = 1f
-                                scaleY = 1f
-                                translationX = 0f
-                            } else {
+                            if (progress > 0.001f && componentHeight > 0f) {
                                 val distance = abs(touchY - letterCenterY)
 
-                                val factor = if (distance < maxRadiusPx) {
-                                    val rawFactor = (1f + cos((distance / maxRadiusPx) * Math.PI.toFloat())) / 2f
-                                    rawFactor * progress
-                                } else {
-                                    0f
+                                if (distance < maxRadiusPx) {
+                                    val factor = ((1f + cos((distance / maxRadiusPx) * Math.PI.toFloat())) / 2f) * progress
+                                    
+                                    // Organic fisheye wave bulge outwards to the left without changing font sizes
+                                    translationX = maxTranslationXPx * factor
                                 }
-
-                                scaleX = 1f + (0.15f * factor)
-                                scaleY = 1f + (0.15f * factor)
-                                translationX = translationXDistance * factor
                             }
                         },
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     Text(
                         text = letter.toString(),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isAvailable) {
-                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                        } else {
-                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f)
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected || isAvailable) FontWeight.Bold else FontWeight.Normal,
+                        color = when {
+                            isSelected -> MaterialTheme.colorScheme.primary
+                            isAvailable -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                            else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
                         }
                     )
                 }
             }
         }
 
-        // Layer 1: Floating Frosted Glass Preview Badge perfectly following cursor Y
+        // Layer 1: Floating Frosted Glass Preview Badge showing the selected letter
         val activeChar = activeIndex?.let { if (it in items.indices) items[it] else null }
         if (touchProgress > 0.01f && activeChar != null) {
             FrostedGlassBadge(
                 letter = activeChar,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(x = (-42).dp, y = animatedBadgeY)
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-80).dp, y = animatedBadgeY)
                     .graphicsLayer {
                         scaleX = touchProgress
                         scaleY = touchProgress
@@ -245,18 +260,22 @@ fun FrostedGlassBadge(
                 }
                 .background(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Color.White.copy(alpha = 0.25f)
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
                     } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                     }
                 )
-                .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                .border(
+                    1.5.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                    CircleShape
+                )
         )
 
         // Crisp text overlay on top so the letter inside the circle is sharp and fully legible
         Text(
             text = letter.toString(),
-            fontSize = 30.sp,
+            fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )

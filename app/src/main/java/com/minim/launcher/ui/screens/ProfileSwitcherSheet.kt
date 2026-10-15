@@ -17,6 +17,7 @@ import com.minim.launcher.data.db.SpaceEntity
 import com.minim.launcher.ui.components.AdaptiveSurface
 import com.minim.launcher.ui.theme.DesignLanguage
 import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +31,8 @@ fun ProfileSwitcherSheet(
 ) {
     val language = LocalDesignLanguage.current
     val isGlass = language == DesignLanguage.GLASS
+    val isDark = LocalIsDark.current
+    val glassColor = if (isDark) Color.White else Color.Black
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -41,7 +44,7 @@ fun ProfileSwitcherSheet(
                     "Profiles",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface,
+                    color = if (isGlass) glassColor else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
 
@@ -55,6 +58,7 @@ fun ProfileSwitcherSheet(
                     icon = Icons.Filled.Schedule,
                     selected = activeSpaceId.isNullOrEmpty(),
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onSelect(null); onDismiss() }
                 )
 
@@ -65,6 +69,7 @@ fun ProfileSwitcherSheet(
                         icon = null,
                         selected = space.id == activeSpaceId,
                         isGlass = isGlass,
+                        isDark = isDark,
                         onClick = { onSelect(space.id); onDismiss() }
                     )
                 }
@@ -73,7 +78,7 @@ fun ProfileSwitcherSheet(
                     onClick = { onManageSpaces(); onDismiss() },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Text("Manage spaces", color = if (isGlass) Color.Black else MaterialTheme.colorScheme.primary)
+                    Text("Manage spaces", color = if (isGlass) glassColor else MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -93,10 +98,12 @@ private fun ProfileRow(
     icon: ImageVector?,
     selected: Boolean,
     isGlass: Boolean,
+    isDark: Boolean,
     onClick: () -> Unit
 ) {
-    val textColor = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
-    val subtextColor = if (isGlass) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    val glassColor = if (isDark) Color.White else Color.Black
+    val textColor = if (isGlass) glassColor else MaterialTheme.colorScheme.onSurface
+    val subtextColor = if (isGlass) glassColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
 
     Row(
         modifier = Modifier
@@ -114,7 +121,7 @@ private fun ProfileRow(
             )
         }
         if (selected) {
-            Icon(Icons.Filled.Check, contentDescription = "Active", tint = if (isGlass) Color.Black else MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.Check, contentDescription = "Active", tint = if (isGlass) glassColor else MaterialTheme.colorScheme.primary)
         }
     }
 }
