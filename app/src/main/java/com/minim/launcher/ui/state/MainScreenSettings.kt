@@ -19,7 +19,7 @@ data class MainScreenSettings(
     val accentName: String,
     val activeSpaceId: String,
     val autoActivateEnabled: Boolean,
-    val appWidgetId: Int,
+    val appWidgetIds: List<Int>,
     val showCalendarPeek: Boolean,
     val notificationBadgesEnabled: Boolean
 )
@@ -35,13 +35,13 @@ fun rememberMainScreenSettings(settings: SettingsRepository): MainScreenSettings
     val accentName by settings.accentName.collectAsState(initial = "Red")
     val activeSpaceId by settings.activeSpaceId.collectAsState(initial = "")
     val autoActivateEnabled by settings.autoActivateProfiles.collectAsState(initial = true)
-    val appWidgetId by settings.widgetAppWidgetId.collectAsState(initial = -1)
+    val appWidgetIds by settings.widgetAppWidgetIds.collectAsState(initial = emptyList())
     val showCalendarPeek by settings.showCalendarPeek.collectAsState(initial = false)
     val notificationBadgesEnabled by settings.notificationBadgesEnabled.collectAsState(initial = false)
 
     return MainScreenSettings(
         widgetCollapsed, showClock, showQuickSettings, themeModeRaw, designLanguageRaw,
-        dynamicColor, accentName, activeSpaceId, autoActivateEnabled, appWidgetId,
+        dynamicColor, accentName, activeSpaceId, autoActivateEnabled, appWidgetIds,
         showCalendarPeek, notificationBadgesEnabled
     )
 }

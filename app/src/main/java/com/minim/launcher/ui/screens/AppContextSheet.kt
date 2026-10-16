@@ -21,6 +21,7 @@ import com.minim.launcher.data.AppInfo
 import com.minim.launcher.ui.components.AdaptiveSurface
 import com.minim.launcher.ui.theme.DesignLanguage
 import com.minim.launcher.ui.theme.LocalDesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +36,8 @@ fun AppContextSheet(
 ) {
     val language = LocalDesignLanguage.current
     val isGlass = language == DesignLanguage.GLASS
+    val isDark = LocalIsDark.current
+    val glassColor = if (isDark) Color.White else Color.Black
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -46,7 +49,7 @@ fun AppContextSheet(
                     text = app.label,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface,
+                    color = if (isGlass) glassColor else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
 
@@ -54,24 +57,28 @@ fun AppContextSheet(
                     icon = if (app.favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                     label = if (app.favorite) "Remove from favorites" else "Add to favorites",
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onToggleFavorite(); onDismiss() }
                 )
                 ContextSheetRow(
                     icon = Icons.Filled.TouchApp,
                     label = "Set swipe quick action",
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onSetQuickAction(); onDismiss() }
                 )
                 ContextSheetRow(
                     icon = Icons.Filled.Widgets,
                     label = "Add to a space",
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onAddToSpace(); onDismiss() }
                 )
                 ContextSheetRow(
                     icon = Icons.Filled.VisibilityOff,
                     label = "Hide from app list",
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onHide(); onDismiss() }
                 )
                 ContextSheetRow(
@@ -79,6 +86,7 @@ fun AppContextSheet(
                     label = "Uninstall",
                     destructive = true,
                     isGlass = isGlass,
+                    isDark = isDark,
                     onClick = { onUninstall(); onDismiss() }
                 )
             }
@@ -100,8 +108,10 @@ private fun ContextSheetRow(
     label: String,
     destructive: Boolean = false,
     isGlass: Boolean,
+    isDark: Boolean,
     onClick: () -> Unit
 ) {
+    val glassColor = if (isDark) Color.White else Color.Black
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,12 +122,12 @@ private fun ContextSheetRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (destructive) MaterialTheme.colorScheme.error else if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+            tint = if (destructive) MaterialTheme.colorScheme.error else if (isGlass) glassColor else MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.width(20.dp))
         Text(
             text = label,
-            color = if (destructive) MaterialTheme.colorScheme.error else if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+            color = if (destructive) MaterialTheme.colorScheme.error else if (isGlass) glassColor else MaterialTheme.colorScheme.onSurface
         )
     }
 }

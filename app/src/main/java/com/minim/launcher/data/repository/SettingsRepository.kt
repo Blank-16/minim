@@ -42,6 +42,7 @@ class SettingsRepository(private val context: Context) {
         val ACTIVE_SPACE_ID = stringPreferencesKey("active_space_id") // manual profile override, "" = none
         val AUTO_ACTIVATE_PROFILES = booleanPreferencesKey("auto_activate_profiles")
         val WIDGET_APP_WIDGET_ID = intPreferencesKey("widget_app_widget_id") // -1 = none configured
+        val WIDGET_APP_WIDGET_IDS = stringPreferencesKey("widget_app_widget_ids") // comma-separated widget ids
         val ICON_SHAPE = stringPreferencesKey("icon_shape") // "circle" | "squircle" | "roundedSquare"
         val SHOW_CALENDAR_PEEK = booleanPreferencesKey("show_calendar_peek")
         val NOTIFICATION_BADGES_ENABLED = booleanPreferencesKey("notification_badges_enabled")
@@ -68,6 +69,16 @@ class SettingsRepository(private val context: Context) {
     val activeSpaceId: Flow<String> = context.dataStore.data.map { it[Keys.ACTIVE_SPACE_ID] ?: "" }
     val autoActivateProfiles: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_ACTIVATE_PROFILES] ?: true }
     val widgetAppWidgetId: Flow<Int> = context.dataStore.data.map { it[Keys.WIDGET_APP_WIDGET_ID] ?: -1 }
+    val widgetAppWidgetIds: Flow<List<Int>> = context.dataStore.data.map { prefs ->
+        val rawList = prefs[Keys.WIDGET_APP_WIDGET_IDS]
+        if (rawList != null) {
+            if (rawList.isBlank()) emptyList()
+            else rawList.split(",").mapNotNull { it.trim().toIntOrNull() }
+        } else {
+            val legacyId = prefs[Keys.WIDGET_APP_WIDGET_ID] ?: -1
+            if (legacyId != -1) listOf(legacyId) else emptyList()
+        }
+    }
     val iconShape: Flow<String> = context.dataStore.data.map { it[Keys.ICON_SHAPE] ?: "circle" }
     val showCalendarPeek: Flow<Boolean> = context.dataStore.data.map { it[Keys.SHOW_CALENDAR_PEEK] ?: false }
     val notificationBadgesEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.NOTIFICATION_BADGES_ENABLED] ?: false }
@@ -93,6 +104,35 @@ class SettingsRepository(private val context: Context) {
     suspend fun setActiveSpaceId(value: String) = context.dataStore.edit { it[Keys.ACTIVE_SPACE_ID] = value }
     suspend fun setAutoActivateProfiles(value: Boolean) = context.dataStore.edit { it[Keys.AUTO_ACTIVATE_PROFILES] = value }
     suspend fun setWidgetAppWidgetId(value: Int) = context.dataStore.edit { it[Keys.WIDGET_APP_WIDGET_ID] = value }
+    suspend fun addWidgetAppWidgetId(id: Int) {
+        if (id == -1) return
+        context.dataStore.edit { prefs ->
+            val currentList = prefs[Keys.WIDGET_APP_WIDGET_IDS]?.let { raw ->
+                if (raw.isBlank()) emptyList()
+                else raw.split(",").mapNotNull { it.trim().toIntOrNull() }
+            } ?: run {
+                val legacyId = prefs[Keys.WIDGET_APP_WIDGET_ID] ?: -1
+                if (legacyId != -1) listOf(legacyId) else emptyList()
+            }
+            val newList = currentList + id
+            prefs[Keys.WIDGET_APP_WIDGET_IDS] = newList.joinToString(",")
+            prefs[Keys.WIDGET_APP_WIDGET_ID] = newList.firstOrNull() ?: -1
+        }
+    }
+    suspend fun removeWidgetAppWidgetId(id: Int) {
+        context.dataStore.edit { prefs ->
+            val currentList = prefs[Keys.WIDGET_APP_WIDGET_IDS]?.let { raw ->
+                if (raw.isBlank()) emptyList()
+                else raw.split(",").mapNotNull { it.trim().toIntOrNull() }
+            } ?: run {
+                val legacyId = prefs[Keys.WIDGET_APP_WIDGET_ID] ?: -1
+                if (legacyId != -1) listOf(legacyId) else emptyList()
+            }
+            val newList = currentList.filter { it != id }
+            prefs[Keys.WIDGET_APP_WIDGET_IDS] = newList.joinToString(",")
+            prefs[Keys.WIDGET_APP_WIDGET_ID] = newList.firstOrNull() ?: -1
+        }
+    }
     suspend fun setIconShape(value: String) = context.dataStore.edit { it[Keys.ICON_SHAPE] = value }
     suspend fun setShowCalendarPeek(value: Boolean) = context.dataStore.edit { it[Keys.SHOW_CALENDAR_PEEK] = value }
     suspend fun setNotificationBadgesEnabled(value: Boolean) = context.dataStore.edit { it[Keys.NOTIFICATION_BADGES_ENABLED] = value }

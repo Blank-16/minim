@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -450,9 +451,26 @@ private fun SettingsCard(
         .padding(horizontal = 10.dp, vertical = 6.dp)
 
     if (isGlass) {
+        val baseCardColor = if (isDark) Color(0x991C1C1E) else MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+        val highlightTop = if (isDark) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.30f)
+        val borderColor = if (isDark) Color.White.copy(alpha = 0.35f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+
         modifier = modifier
             .clip(shape)
-            .background(if (isDark) Color(0x991C1C1E) else Color.White.copy(alpha = 0.16f))
+            .background(baseCardColor)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(highlightTop, Color.Transparent),
+                    endY = 60f
+                )
+            )
+            .border(
+                width = 0.5.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(borderColor, borderColor.copy(alpha = 0.10f))
+                ),
+                shape = shape
+            )
     } else if (!isDark) {
         if (designLanguage == DesignLanguage.ANDROID_16) {
             modifier = modifier

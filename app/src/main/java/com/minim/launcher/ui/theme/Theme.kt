@@ -67,8 +67,8 @@ private val Android16Light = lightColorScheme(
 private val GlassDark = darkColorScheme(
     background = Color.Transparent,
     surface = Color(0x33FFFFFF), // translucent white panel over blurred wallpaper
-    onBackground = Color(0xFF000000),
-    onSurface = Color(0xFF000000),
+    onBackground = Color.White,
+    onSurface = Color.White,
     primary = Color(0xFF0A84FF), // iOS system blue
     secondary = Color(0xFFEBEBF5)
 )

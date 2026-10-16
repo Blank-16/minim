@@ -30,6 +30,7 @@ import com.minim.launcher.data.AppInfo
 import com.minim.launcher.data.db.SpaceEntity
 import com.minim.launcher.ui.theme.AccentOptions
 import com.minim.launcher.ui.theme.DesignLanguage
+import com.minim.launcher.ui.theme.LocalIsDark
 import com.minim.launcher.ui.theme.MinimTheme
 import com.minim.launcher.ui.theme.MinimThemeMode
 import com.minim.launcher.util.WindowChromeController
@@ -79,7 +80,7 @@ class SpacesActivity : ComponentActivity() {
                     color = if (designLanguage == DesignLanguage.GLASS) Color.Transparent else MaterialTheme.colorScheme.background
                 ) {
                     val isGlass = designLanguage == DesignLanguage.GLASS
-                    val textColor = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+                    val textColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
                     val textWeight = if (isGlass) FontWeight.Bold else null
 
                     val editing = spaces.firstOrNull { it.id == editingSpaceId }
@@ -121,7 +122,7 @@ class SpacesActivity : ComponentActivity() {
                                     "Spaces group apps together and can carry their own look — " +
                                         "tap + to create one.",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isGlass) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    color = if (isGlass) (if (isDark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                     modifier = Modifier.padding(20.dp)
                                 )
                             }
@@ -147,7 +148,7 @@ class SpacesActivity : ComponentActivity() {
                                             Text(
                                                 subtitle,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = if (isGlass) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                                color = if (isGlass) (if (isDark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                             )
                                         }
                                     }
@@ -308,22 +309,24 @@ private fun SpaceEditor(
 
 @Composable
 private fun SectionHeader(text: String, isGlass: Boolean) {
+    val isDark = LocalIsDark.current
     Text(
         text,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
-        color = if (isGlass) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+        color = if (isGlass) (if (isDark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
 }
 
 @Composable
 private fun DesignOverrideRow(current: String?, isGlass: Boolean, onSelect: (String?) -> Unit) {
+    val isDark = LocalIsDark.current
     val chipColors = if (isGlass) FilterChipDefaults.filterChipColors(
         containerColor = Color.Transparent,
-        labelColor = Color.Black.copy(alpha = 0.8f),
-        selectedContainerColor = Color.Black.copy(alpha = 0.2f),
-        selectedLabelColor = Color.Black
+        labelColor = if (isDark) Color.White.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.8f),
+        selectedContainerColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f),
+        selectedLabelColor = if (isDark) Color.White else Color.Black
     ) else FilterChipDefaults.filterChipColors()
 
     Row(
@@ -339,6 +342,7 @@ private fun DesignOverrideRow(current: String?, isGlass: Boolean, onSelect: (Str
 
 @Composable
 private fun AutoActivateRow(space: SpaceEntity, isGlass: Boolean, textColor: Color, onUpdate: (SpaceEntity) -> Unit) {
+    val isDark = LocalIsDark.current
     val enabled = space.autoActivateStartHour != null
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Row(
@@ -378,7 +382,7 @@ private fun AutoActivateRow(space: SpaceEntity, isGlass: Boolean, textColor: Col
             Text(
                 "Checked when you open the launcher — not a background timer",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isGlass) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                color = if (isGlass) (if (isDark) Color.White.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.5f)) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
     }

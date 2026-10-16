@@ -75,7 +75,7 @@ class HiddenAppsActivity : FragmentActivity() {
                     color = if (designLanguage == DesignLanguage.GLASS) Color.Transparent else MaterialTheme.colorScheme.background
                 ) {
                     val isGlass = designLanguage == DesignLanguage.GLASS
-                    val textColor = if (isGlass) Color.Black else MaterialTheme.colorScheme.onSurface
+                    val textColor = if (isGlass) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.onSurface
                     val textWeight = if (isGlass) FontWeight.Bold else null
 
                     when (authState) {
@@ -94,7 +94,7 @@ class HiddenAppsActivity : FragmentActivity() {
                                 Text(
                                     "No hidden apps. Hide an app from its long-press menu on the home screen.",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isGlass) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                    color = if (isGlass) (if (isDark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                     modifier = Modifier.padding(20.dp)
                                 )
                             }
